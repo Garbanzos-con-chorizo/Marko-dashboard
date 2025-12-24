@@ -9,8 +9,18 @@ import WarmupOverlay from './components/WarmupOverlay';
 
 function DashInner() {
   const [currentPage, setCurrentPage] = useState('overview');
-  const { data } = useTelemetry();
+  const { data, loading, error } = useTelemetry();
 
+  // Handle initial loading state where data.status is not yet available
+  if (loading && !data.status) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
+        INITIALIZING MARKO-V4 TERMINAL...
+      </div>
+    );
+  }
+
+  // Handle warming up state
   if (data.status?.is_warming_up) {
     return <WarmupOverlay status={data.status} />;
   }
