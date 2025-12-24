@@ -1,21 +1,25 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MARKO V4 | Dashboard</title>
-  </head>
-  <body>
-    <div id="root" style="color: white; padding: 20px; font-family: monospace;">LOADING_MARKO_DASHBOARD...</div>
-    <script>
-      window.onerror = function(msg, url, line, col, error) {
-        var errDiv = document.createElement('div');
-        errDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:white;color:red;padding:20px;z-index:99999;font-family:monospace;border:5px solid red;';
-        errDiv.innerHTML = 'FATAL_CRASH: ' + msg + '<br>Line: ' + line + '<br>URL: ' + url;
-        document.body.appendChild(errDiv);
-      };
-    </script>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MARKO V4 | Dashboard</title>
+</head>
+
+<body>
+  <div id="root" style="color: white; padding: 20px; font-family: monospace;">LOADING_MARKO_DASHBOARD...</div>
+  <script>
+    console.log("INDEX_HTML_LOADED");
+    window.onerror = function (msg, url, line, col, error) {
+      var errDiv = document.createElement('div');
+      errDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:black;color:red;padding:20px;z-index:99999;font-family:monospace;overflow:auto;';
+      errDiv.innerHTML = 'FATAL_CRASH: ' + msg + '<br>Line: ' + line + '<br>URL: ' + url + (error ? '<br>Stack: ' + error.stack : '');
+      document.body.appendChild(errDiv);
+    };
+  </script>
+  <script type="module" src="src/main.jsx"></script>
+</body>
+
 </html>
