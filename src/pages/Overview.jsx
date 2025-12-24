@@ -47,8 +47,8 @@ export default function Overview() {
                 />
                 <StatCard
                     label="Last Heartbeat"
-                    value={new Date(status.heartbeat).toLocaleTimeString()}
-                    subValue={new Date(status.heartbeat).toLocaleDateString()}
+                    value={status.heartbeat ? new Date(status.heartbeat).toLocaleTimeString() : '--:--:--'}
+                    subValue={status.heartbeat ? new Date(status.heartbeat).toLocaleDateString() : 'N/A'}
                 />
             </div>
 

@@ -15,17 +15,17 @@ export default function Strategy() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                 <StatCard
                     label="Current Regiem"
-                    value={strategy.state.replace('_', ' ')}
+                    value={(strategy.state || '').replace('_', ' ')}
                     subValue="Markov Model State"
                 />
                 <StatCard
                     label="Conviction Score"
-                    value={(strategy.conviction * 100).toFixed(1) + '%'}
+                    value={(strategy.conviction || 0 * 100).toFixed(1) + '%'}
                     subValue="Model Confidence"
                 />
                 <StatCard
                     label="Risk Multiplier"
-                    value={strategy.riskMultiplier.toFixed(2) + 'x'}
+                    value={(strategy.riskMultiplier || 0).toFixed(2) + 'x'}
                     subValue="Position Sizing Factor"
                 />
             </div>
