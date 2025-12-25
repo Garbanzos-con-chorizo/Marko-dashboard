@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { TelemetryProvider, useTelemetry } from './context/TelemetryContext';
 import Layout from './components/Layout';
 import Overview from './pages/Overview';
@@ -8,7 +9,6 @@ import Events from './pages/Events';
 import WarmupOverlay from './components/WarmupOverlay';
 
 function DashInner() {
-  const [currentPage, setCurrentPage] = useState('overview');
   const { data, loading, error } = useTelemetry();
 
   // Handle initial loading state where data.status is not yet available
@@ -25,28 +25,27 @@ function DashInner() {
     return <WarmupOverlay status={data.status} />;
   }
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'overview': return <Overview />;
-      case 'strategy': return <Strategy />;
-      case 'positions': return <Positions />;
-      case 'events': return <Events />;
-      default: return <Overview />;
-    }
-  };
-
   return (
-    <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
-      {renderPage()}
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Navigate to="/overview" replace />} />
+        <Route path="/overview" element={<Overview />} />
+        <Route path="/strategy" element={<Strategy />} />
+        <Route path="/positions" element={<Positions />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="*" element={<Navigate to="/overview" replace />} />
+      </Routes>
     </Layout>
   );
 }
 
 function App() {
   return (
-    <TelemetryProvider>
-      <DashInner />
-    </TelemetryProvider>
+    <BrowserRouter>
+      <TelemetryProvider>
+        <DashInner />
+      </TelemetryProvider>
+    </BrowserRouter>
   );
 }
 

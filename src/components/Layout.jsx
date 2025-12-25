@@ -1,30 +1,33 @@
 import React from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 
-const NavLink = ({ label, active, onClick }) => (
-    <button
-        onClick={onClick}
-        style={{
+import { NavLink } from 'react-router-dom';
+
+const SidebarLink = ({ to, label }) => (
+    <NavLink
+        to={to}
+        style={({ isActive }) => ({
             display: 'block',
             width: '100%',
             textAlign: 'left',
-            background: active ? 'var(--bg-tertiary)' : 'transparent',
-            color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+            background: isActive ? 'var(--bg-tertiary)' : 'transparent',
+            color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
             border: 'none',
-            borderLeft: active ? '3px solid var(--accent-primary)' : '3px solid transparent',
+            borderLeft: isActive ? '3px solid var(--accent-primary)' : '3px solid transparent',
             padding: '12px 16px',
             cursor: 'pointer',
             fontFamily: 'var(--font-sans)',
             fontSize: '14px',
             fontWeight: '500',
-            transition: 'all 0.2s ease'
-        }}
+            transition: 'all 0.2s ease',
+            textDecoration: 'none'
+        })}
     >
         {label}
-    </button>
+    </NavLink>
 );
 
-export default function Layout({ currentPage, onNavigate, children }) {
+export default function Layout({ children }) {
     const { lastUpdated, error } = useTelemetry();
 
     return (
@@ -49,10 +52,10 @@ export default function Layout({ currentPage, onNavigate, children }) {
                 </div>
 
                 <nav style={{ flex: 1, padding: '16px 0' }}>
-                    <NavLink label="OVERVIEW" active={currentPage === 'overview'} onClick={() => onNavigate('overview')} />
-                    <NavLink label="STRATEGY" active={currentPage === 'strategy'} onClick={() => onNavigate('strategy')} />
-                    <NavLink label="POSITIONS" active={currentPage === 'positions'} onClick={() => onNavigate('positions')} />
-                    <NavLink label="EVENTS / LOGS" active={currentPage === 'events'} onClick={() => onNavigate('events')} />
+                    <SidebarLink to="/overview" label="OVERVIEW" />
+                    <SidebarLink to="/strategy" label="STRATEGY" />
+                    <SidebarLink to="/positions" label="POSITIONS" />
+                    <SidebarLink to="/events" label="EVENTS / LOGS" />
                 </nav>
 
                 <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)', fontSize: '11px' }}>
