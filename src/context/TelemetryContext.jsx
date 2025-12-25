@@ -23,33 +23,23 @@ export const TelemetryProvider = ({ children }) => {
 
         const fetchData = async () => {
             try {
-                // 1. Always poll status first
-                const statusData = await api.getStatus();
+                // Single telemetry call
+                const telemetryData = await api.getTelemetry();
 
-                if (statusData.is_warming_up) {
+                // Check warmup state
+                if (telemetryData.status?.is_warming_up) {
                     if (isMounted.current) {
-                        setTelemetry(prev => ({ ...prev, status: statusData }));
+                        setTelemetry(telemetryData);
                         setLoading(false);
                         setError(null);
                         setLastUpdated(new Date());
                     }
-                    return; // Skip other polls during warmup
+                    return; // Skip further processing during warmup
                 }
 
-                // 2. Poll the rest only if ready
-                const [strategyData, positionsData, eventsData] = await Promise.all([
-                    api.getStrategy(),
-                    api.getPositions(),
-                    api.getEvents(),
-                ]);
-
+                // Normal operation - all data already transformed
                 if (isMounted.current) {
-                    setTelemetry({
-                        status: statusData,
-                        strategy: strategyData,
-                        positions: positionsData,
-                        events: eventsData,
-                    });
+                    setTelemetry(telemetryData);
                     setError(null);
                     setLastUpdated(new Date());
                 }
@@ -57,7 +47,6 @@ export const TelemetryProvider = ({ children }) => {
                 if (isMounted.current) {
                     console.error('Telemetry Fetch Error:', err);
                     setError(err.message || 'Failed to fetch telemetry');
-                    // Start showing stale data indicator if needed (handled by UI via lastUpdated)
                 }
             } finally {
                 if (isMounted.current) {
