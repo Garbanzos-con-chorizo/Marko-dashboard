@@ -1,9 +1,10 @@
 import React from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 import StatCard from '../components/StatCard';
+import PriceChart from '../components/PriceChart';
 
 export default function Overview() {
-    const { data, loading } = useTelemetry();
+    const { data, chartData, loading } = useTelemetry();
     const { status, strategy } = data;
 
     if (loading) return <div style={{ color: 'var(--text-muted)' }}>Initializing telemetry stream...</div>;
@@ -51,6 +52,9 @@ export default function Overview() {
                     subValue={status.heartbeat ? new Date(status.heartbeat).toLocaleDateString() : 'N/A'}
                 />
             </div>
+
+            {/* Price Chart */}
+            <PriceChart chartData={chartData} />
 
             <div className="card" style={{ marginTop: '16px' }}>
                 <h3 style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase' }}>Last Engine Action</h3>

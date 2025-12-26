@@ -10,8 +10,10 @@ export const TelemetryProvider = ({ children }) => {
         positions: [],
         events: [],
     });
+    const [chartData, setChartData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [chartError, setChartError] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
 
     // Improve polling consistency with a ref to track mounting
@@ -67,10 +69,45 @@ export const TelemetryProvider = ({ children }) => {
         };
     }, []);
 
+    // Separate polling for chart data (less frequent)
+    useEffect(() => {
+        const chartPollInterval = 10000; // 10 seconds
+        let chartIntervalId;
+
+        const fetchChartData = async () => {
+            try {
+                const data = await api.getChartData();
+                if (isMounted.current) {
+                    setChartData(data);
+                    setChartError(null);
+                }
+            } catch (err) {
+                if (isMounted.current) {
+                    console.error('Chart Fetch Error:', err);
+                    setChartError(err.message || 'Failed to fetch chart data');
+                }
+            }
+        };
+
+        // Initial fetch
+        fetchChartData();
+
+        // Set up polling
+        chartIntervalId = setInterval(fetchChartData, chartPollInterval);
+
+        return () => {
+            if (chartIntervalId) {
+                clearInterval(chartIntervalId);
+            }
+        };
+    }, []);
+
     const value = {
         data: telemetry,
+        chartData,
         loading,
         error,
+        chartError,
         lastUpdated,
     };
 

@@ -2,6 +2,35 @@ import React from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 import StatCard from '../components/StatCard';
 
+// Helper functions for interpretative labels
+const getPhiLabel = (phi) => {
+    if (phi === null || phi === undefined) return 'Unknown';
+    if (phi < 0.3) return 'Low';
+    if (phi < 0.7) return 'Medium';
+    return 'High';
+};
+
+const getVolatilityLabel = (volatility) => {
+    if (volatility === null || volatility === undefined) return 'Unknown';
+    if (volatility < 0.15) return 'Calm';
+    if (volatility < 0.30) return 'Normal';
+    return 'Elevated';
+};
+
+const getRiskMultiplierLabel = (multiplier) => {
+    if (multiplier === null || multiplier === undefined) return 'Unknown';
+    if (multiplier < 0.8) return 'Defensive';
+    if (multiplier < 1.2) return 'Neutral';
+    return 'Aggressive';
+};
+
+const getConvictionLabel = (conviction) => {
+    if (conviction === null || conviction === undefined) return 'Unknown';
+    if (conviction < 0.4) return 'Low Confidence';
+    if (conviction < 0.7) return 'Medium Confidence';
+    return 'High Confidence';
+};
+
 export default function Strategy() {
     const { data } = useTelemetry();
 
@@ -11,11 +40,13 @@ export default function Strategy() {
     if (!strategy) return null;
 
     const {
-        state,
-        conviction,
-        riskMultiplier,
+        regime,
+        phi,
+        volatility,
+        risk_multiplier,
+        conviction_score,
         filters,
-        lastDecisionReason
+        last_decision
     } = strategy;
 
     return (
@@ -33,21 +64,57 @@ export default function Strategy() {
             >
                 <StatCard
                     label="Current Regime"
-                    value={(state ?? '').replace(/_/g, ' ')}
+                    value={(regime ?? 'UNKNOWN').replace(/_/g, ' ')}
                     subValue="Markov Model State"
                 />
 
-                <StatCard
-                    label="Conviction Score"
-                    value={((conviction ?? 0) * 100).toFixed(1) + '%'}
-                    subValue="Model Confidence"
-                />
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        φ (Phi) • Regime Stability
+                    </div>
+                    <div style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: '500' }}>
+                        {phi !== null && phi !== undefined ? phi.toFixed(3) : '—'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        {getPhiLabel(phi)}
+                    </div>
+                </div>
 
-                <StatCard
-                    label="Risk Multiplier"
-                    value={(riskMultiplier ?? 0).toFixed(2) + 'x'}
-                    subValue="Position Sizing Factor"
-                />
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Volatility
+                    </div>
+                    <div style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: '500' }}>
+                        {volatility !== null && volatility !== undefined ? (volatility * 100).toFixed(1) + '%' : '—'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        {getVolatilityLabel(volatility)}
+                    </div>
+                </div>
+
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Risk Multiplier
+                    </div>
+                    <div style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: '500' }}>
+                        {risk_multiplier !== null && risk_multiplier !== undefined ? risk_multiplier.toFixed(2) + 'x' : '—'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        {getRiskMultiplierLabel(risk_multiplier)}
+                    </div>
+                </div>
+
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Conviction Score
+                    </div>
+                    <div style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: '500' }}>
+                        {conviction_score !== null && conviction_score !== undefined ? (conviction_score * 100).toFixed(1) + '%' : '—'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        {getConvictionLabel(conviction_score)}
+                    </div>
+                </div>
             </div>
 
             <div className="flex gap-4" style={{ marginTop: '16px' }}>
@@ -120,8 +187,8 @@ export default function Strategy() {
                             color: 'var(--text-primary)'
                         }}
                     >
-                        {lastDecisionReason
-                            ? `"${lastDecisionReason}"`
+                        {last_decision
+                            ? `"${last_decision}"`
                             : '—'}
                     </div>
                 </div>

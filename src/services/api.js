@@ -26,9 +26,11 @@ const generateTelemetry = () => {
     },
     strategy: {
       name: 'MARKO_V4',
-      markov_state: isWarmingUp ? null : 'VOLATILITY_EXPANSION',
-      conviction_score: isWarmingUp ? 0 : 0.85,
-      risk_multiplier: isWarmingUp ? 1 : 1.2,
+      regime: isWarmingUp ? null : 'VOLATILITY_EXPANSION',
+      phi: isWarmingUp ? null : 0.85,
+      volatility: isWarmingUp ? null : 0.22,
+      risk_multiplier: isWarmingUp ? null : 1.2,
+      conviction_score: isWarmingUp ? null : 0.85,
       active_filters: isWarmingUp ? [] : ['trend', 'volatility'],
       last_decision: isWarmingUp ? 'WAIT' : 'REBALANCE'
     },
@@ -80,11 +82,13 @@ function transformTelemetry(raw) {
       lastAction: raw.strategy?.last_decision || 'WAIT'
     },
     strategy: {
-      state: raw.strategy?.markov_state || 'UNKNOWN',
-      conviction: raw.strategy?.conviction_score || 0,
-      riskMultiplier: raw.strategy?.risk_multiplier || 1,
+      regime: raw.strategy?.regime || raw.strategy?.markov_state || 'UNKNOWN',
+      phi: raw.strategy?.phi ?? null,
+      volatility: raw.strategy?.volatility ?? null,
+      conviction_score: raw.strategy?.conviction_score ?? 0,
+      risk_multiplier: raw.strategy?.risk_multiplier ?? 1,
       filters: filtersObj,
-      lastDecisionReason: raw.strategy?.last_decision || 'No recent decision'
+      last_decision: raw.strategy?.last_decision || 'No recent decision'
     },
     positions: (raw.portfolio?.positions || []).map(pos => ({
       symbol: pos.symbol,
@@ -119,6 +123,97 @@ async function fetchTelemetry() {
   }
 }
 
+// Mock chart data generator matching /api/chart contract
+const generateChartData = () => {
+  const now = Date.now();
+  const bars = [];
+  const entries = [];
+  const exits = [];
+
+  // Generate 100 bars (candlesticks) with realistic price movement
+  let basePrice = 67000;
+  for (let i = 99; i >= 0; i--) {
+    const ts = now - (i * 60000); // 1-minute bars
+    const volatility = Math.random() * 200;
+    const open = basePrice;
+    const close = basePrice + (Math.random() - 0.5) * volatility;
+    const high = Math.max(open, close) + Math.random() * 100;
+    const low = Math.min(open, close) - Math.random() * 100;
+    const volume = Math.random() * 10 + 5;
+
+    bars.push({ ts, open, high, low, close, volume });
+    basePrice = close;
+
+    // Add some random entries
+    if (i === 70) {
+      entries.push({ ts, price: open, side: 'LONG', size: 0.5 });
+    }
+    if (i === 40) {
+      exits.push({ ts, price: close });
+    }
+    if (i === 30) {
+      entries.push({ ts, price: open, side: 'SHORT', size: 0.3 });
+    }
+  }
+
+  return {
+    symbol: 'BTC/USD',
+    timeframe: '1m',
+    bars,
+    overlays: {
+      entries,
+      exits,
+      current_position: {
+        side: 'SHORT',
+        entry_price: entries[entries.length - 1]?.price || null,
+        size: 0.3
+      }
+    }
+  };
+};
+
+async function fetchChartData() {
+  if (IS_MOCK) {
+    await sleep(MOCK_DELAY);
+    return generateChartData();
+  }
+
+  const url = `${API_BASE_URL}/api/chart`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+
+    // Defensive validation
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid chart data structure');
+    }
+
+    // Ensure arrays exist
+    if (!Array.isArray(data.bars)) {
+      data.bars = [];
+    }
+    if (!data.overlays || typeof data.overlays !== 'object') {
+      data.overlays = { entries: [], exits: [], current_position: { side: 'FLAT', entry_price: null, size: null } };
+    }
+    if (!Array.isArray(data.overlays.entries)) {
+      data.overlays.entries = [];
+    }
+    if (!Array.isArray(data.overlays.exits)) {
+      data.overlays.exits = [];
+    }
+
+    return data;
+  } catch (error) {
+    console.error(`Fetch failed for ${url}:`, error);
+    throw error;
+  }
+}
+
 export const api = {
-  getTelemetry: fetchTelemetry
+  getTelemetry: fetchTelemetry,
+  getChartData: fetchChartData
 };
