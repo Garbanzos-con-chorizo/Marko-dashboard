@@ -14,10 +14,11 @@ export default function PriceChart({ chartData }) {
         const ctx = canvas.getContext('2d');
         const { width, height } = canvas.getBoundingClientRect();
 
-        // Set canvas resolution
-        canvas.width = width * window.devicePixelRatio;
-        canvas.height = height * window.devicePixelRatio;
-        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        // Set canvas resolution for High-DPI screens
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.scale(dpr, dpr);
 
         // Clear canvas
         ctx.clearRect(0, 0, width, height);
@@ -28,53 +29,116 @@ export default function PriceChart({ chartData }) {
         const exits = Array.isArray(overlays.exits) ? overlays.exits : [];
         const currentPosition = overlays.current_position || {};
 
-        // Calculate price range
-        let minPrice = Infinity;
-        let maxPrice = -Infinity;
+        // 1. Calculate Price Range
+        let dataMin = Infinity;
+        let dataMax = -Infinity;
         bars.forEach(bar => {
-            if (bar.low < minPrice) minPrice = bar.low;
-            if (bar.high > maxPrice) maxPrice = bar.high;
+            if (bar.low < dataMin) dataMin = bar.low;
+            if (bar.high > dataMax) dataMax = bar.high;
         });
 
-        const priceRange = maxPrice - minPrice;
-        const padding = priceRange * 0.1;
-        minPrice -= padding;
-        maxPrice += padding;
+        // 2. "Nice Ticks" Algorithm for Price Axis
+        const calculateNicePriceTicks = (min, max, targetCount = 6) => {
+            const range = max - min;
+            const roughStep = range / (targetCount - 1);
+            const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+            const normalizedStep = roughStep / magnitude;
 
-        // Drawing parameters
-        const chartHeight = height - 40;
-        const chartTop = 20;
-        const barWidth = Math.max(2, (width - 40) / bars.length);
-        const barSpacing = barWidth * 0.2;
-        const candleWidth = barWidth - barSpacing;
+            let step;
+            if (normalizedStep < 1.5) step = 1 * magnitude;
+            else if (normalizedStep < 3) step = 2 * magnitude;
+            else if (normalizedStep < 7) step = 5 * magnitude;
+            else step = 10 * magnitude;
 
-        // Helper: Convert price to Y coordinate
+            const niceMin = Math.floor(min / step) * step;
+            const niceMax = Math.ceil(max / step) * step;
+
+            const ticks = [];
+            for (let v = niceMin; v <= niceMax + (step / 2); v += step) {
+                ticks.push(v);
+            }
+            return { ticks, niceMin, niceMax };
+        };
+
+        const { ticks: priceTicks, niceMin, niceMax } = calculateNicePriceTicks(dataMin, dataMax);
+
+        // 3. Drawing Parameters
+        const chartPadding = { top: 30, right: 60, bottom: 40, left: 10 };
+        const innerWidth = width - chartPadding.left - chartPadding.right;
+        const innerHeight = height - chartPadding.top - chartPadding.bottom;
+
+        // Scale Helpers
         const priceToY = (price) => {
-            return chartTop + chartHeight - ((price - minPrice) / (maxPrice - minPrice)) * chartHeight;
+            return chartPadding.top + innerHeight - ((price - niceMin) / (niceMax - niceMin)) * innerHeight;
         };
 
-        // Helper: Convert timestamp to X coordinate
-        const tsToX = (ts) => {
-            const index = bars.findIndex(b => b.ts === ts);
-            if (index === -1) return null;
-            return 20 + index * barWidth + barWidth / 2;
+        const barWidth = innerWidth / bars.length;
+        const tsToX = (index) => {
+            return chartPadding.left + index * barWidth + barWidth / 2;
         };
 
-        // Draw grid lines
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.lineWidth = 1;
-        for (let i = 0; i <= 5; i++) {
-            const y = chartTop + (chartHeight / 5) * i;
+        // Find TS by value (used for overlays)
+        const getXByTs = (ts) => {
+            const index = bars.findIndex(b => Math.abs(b.ts - ts) < 1000); // 1s tolerance
+            return index === -1 ? null : tsToX(index);
+        };
+
+        // 4. Draw Grid and Ticks
+        ctx.textAlign = 'left';
+        ctx.font = '10px "JetBrains Mono", monospace';
+
+        // Vertical Ticks (Price)
+        priceTicks.forEach(tick => {
+            const y = priceToY(tick);
+            if (y < chartPadding.top || y > chartPadding.top + innerHeight + 5) return;
+
+            // Grid line
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
             ctx.beginPath();
-            ctx.moveTo(20, y);
-            ctx.lineTo(width - 20, y);
+            ctx.moveTo(chartPadding.left, y);
+            ctx.lineTo(width - chartPadding.right, y);
             ctx.stroke();
-        }
 
-        // Draw candlesticks
+            // Label
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.fillText(tick.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }), width - chartPadding.right + 10, y + 4);
+        });
+
+        // Horizontal Ticks (Time) - Hourly Logic
+        const labelInterval = Math.max(1, Math.floor(bars.length / 8));
+        bars.forEach((bar, i) => {
+            // Show label every X bars OR if it's the start of a new day/specific hour
+            const date = new Date(bar.ts);
+            const isHourStart = date.getMinutes() === 0;
+
+            if (i % labelInterval === 0 || isHourStart) {
+                const x = tsToX(i);
+
+                // Fine grid
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+                ctx.beginPath();
+                ctx.moveTo(x, chartPadding.top);
+                ctx.lineTo(x, chartPadding.top + innerHeight);
+                ctx.stroke();
+
+                // Label
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.textAlign = 'center';
+                const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                ctx.fillText(timeStr, x, chartPadding.top + innerHeight + 20);
+
+                // Add Date if it's 00:00
+                if (date.getHours() === 0 && date.getMinutes() === 0) {
+                    ctx.fillText(date.toLocaleDateString([], { month: 'short', day: 'numeric' }), x, chartPadding.top + innerHeight + 32);
+                }
+            }
+        });
+
+        // 5. Draw Candlesticks
         bars.forEach((bar, index) => {
-            const x = 20 + index * barWidth;
+            const x = chartPadding.left + index * barWidth;
             const isGreen = bar.close >= bar.open;
+            const candlePadding = barWidth * 0.15;
 
             ctx.strokeStyle = isGreen ? '#10b981' : '#ef4444';
             ctx.fillStyle = isGreen ? '#10b981' : '#ef4444';
@@ -85,139 +149,116 @@ export default function PriceChart({ chartData }) {
             const highY = priceToY(bar.high);
             const lowY = priceToY(bar.low);
 
-            // Draw wick
+            // Wick
             ctx.beginPath();
             ctx.moveTo(x + barWidth / 2, highY);
             ctx.lineTo(x + barWidth / 2, lowY);
             ctx.stroke();
 
-            // Draw body
-            const bodyHeight = Math.abs(closeY - openY);
+            // Body
+            const bodyHeight = Math.max(1, Math.abs(closeY - openY));
             const bodyY = Math.min(openY, closeY);
-
-            if (bodyHeight < 1) {
-                // Doji - draw a line
-                ctx.beginPath();
-                ctx.moveTo(x + barSpacing / 2, openY);
-                ctx.lineTo(x + barWidth - barSpacing / 2, openY);
-                ctx.stroke();
-            } else {
-                ctx.fillRect(x + barSpacing / 2, bodyY, candleWidth, bodyHeight);
-            }
+            ctx.fillRect(x + candlePadding, bodyY, barWidth - candlePadding * 2, bodyHeight);
         });
 
-        // Draw current position entry price line
+        // 6. Draw Current Position Line
         if (currentPosition.side !== 'FLAT' && currentPosition.entry_price !== null) {
             const entryY = priceToY(currentPosition.entry_price);
-            ctx.strokeStyle = currentPosition.side === 'LONG' ? '#10b981' : '#ef4444';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(20, entryY);
-            ctx.lineTo(width - 20, entryY);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            if (entryY >= chartPadding.top && entryY <= chartPadding.top + innerHeight) {
+                ctx.strokeStyle = currentPosition.side === 'LONG' ? '#10b981' : '#ef4444';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(chartPadding.left, entryY);
+                ctx.lineTo(width - chartPadding.right, entryY);
+                ctx.stroke();
+                ctx.setLineDash([]);
 
-            // Label
-            ctx.fillStyle = currentPosition.side === 'LONG' ? '#10b981' : '#ef4444';
-            ctx.font = '11px monospace';
-            ctx.fillText(`${currentPosition.side} @ ${currentPosition.entry_price.toFixed(2)}`, width - 150, entryY - 5);
+                // Position Label
+                ctx.fillStyle = ctx.strokeStyle;
+                ctx.textAlign = 'right';
+                ctx.fillText(`AVG ${currentPosition.entry_price.toFixed(2)}`, width - chartPadding.right - 5, entryY - 5);
+            }
         }
 
-        // Draw entry markers
+        // 7. Draw Overlays (Entries/Exits)
         entries.forEach(entry => {
-            const x = tsToX(entry.ts);
+            const x = getXByTs(entry.ts);
             if (x === null) return;
-
             const y = priceToY(entry.price);
             const color = entry.side === 'LONG' ? '#10b981' : '#ef4444';
 
             ctx.fillStyle = color;
             ctx.beginPath();
             if (entry.side === 'LONG') {
-                // Triangle pointing up
-                ctx.moveTo(x, y - 8);
-                ctx.lineTo(x - 6, y);
-                ctx.lineTo(x + 6, y);
+                ctx.moveTo(x, y + 15); ctx.lineTo(x - 5, y + 25); ctx.lineTo(x + 5, y + 25);
             } else {
-                // Triangle pointing down
-                ctx.moveTo(x, y + 8);
-                ctx.lineTo(x - 6, y);
-                ctx.lineTo(x + 6, y);
+                ctx.moveTo(x, y - 15); ctx.lineTo(x - 5, y - 25); ctx.lineTo(x + 5, y - 25);
             }
-            ctx.closePath();
             ctx.fill();
         });
 
-        // Draw exit markers
         exits.forEach(exit => {
-            const x = tsToX(exit.ts);
+            const x = getXByTs(exit.ts);
             if (x === null) return;
-
             const y = priceToY(exit.price);
-
-            ctx.fillStyle = '#6b7280';
-            ctx.beginPath();
-            ctx.arc(x, y, 5, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = '#1f2937';
+            ctx.strokeStyle = '#6b7280';
             ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
             ctx.stroke();
         });
-
-        // Draw price labels
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.font = '11px monospace';
-        ctx.textAlign = 'right';
-        for (let i = 0; i <= 5; i++) {
-            const price = minPrice + (priceRange / 5) * i;
-            const y = chartTop + chartHeight - (chartHeight / 5) * i;
-            ctx.fillText(price.toFixed(0), width - 25, y + 4);
-        }
 
     }, [chartData]);
 
     if (!chartData || !Array.isArray(chartData.bars) || chartData.bars.length === 0) {
         return (
             <div className="card h-[400px] flex items-center justify-center">
-                <div className="text-textMuted text-sm">
-                    No chart data available
-                </div>
+                <div className="text-textMuted text-sm font-mono">WAIT_FOR_DATA...</div>
             </div>
         );
     }
 
     return (
-        <div className="card p-4">
-            <div className="flex justify-between items-center mb-3">
-                <h3 className="text-sm text-textMuted uppercase tracking-wider">
-                    {chartData.symbol || 'Price Chart'} • {chartData.timeframe || '1m'}
-                </h3>
-                <div className="text-xs text-textSecondary">
-                    {chartData.bars.length} bars
+        <div className="card p-4 overflow-hidden">
+            <div className="flex justify-between items-center mb-4 border-b border-border/50 pb-2">
+                <div className="flex items-center gap-3">
+                    <h3 className="text-xs font-bold text-text uppercase tracking-[2px]">
+                        {chartData.symbol || 'MARKET_DATA'}
+                    </h3>
+                    <span className="px-1.5 py-0.5 bg-surfaceHighlight rounded text-[10px] text-primary font-mono">
+                        {chartData.timeframe || '1H'}
+                    </span>
+                </div>
+                <div className="text-[10px] text-textMuted font-mono uppercase">
+                    Live Stream · {chartData.bars.length} Bars
                 </div>
             </div>
 
-            <div className="relative w-full h-[400px]">
+            <div className="relative w-full h-[450px]">
                 <canvas
                     ref={canvasRef}
-                    className="w-full h-full bg-black/20 rounded"
+                    className="w-full h-full"
+                    style={{ cursor: 'crosshair' }}
                 />
             </div>
 
-            <div className="flex gap-4 mt-3 text-[11px] text-textMuted">
-                <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 bg-statusGood rounded-[2px]"></div>
-                    <span>Long Entry</span>
+            <div className="flex flex-wrap gap-6 mt-4 text-[10px] text-textMuted font-mono border-t border-border/30 pt-3">
+                <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-statusGood rounded-[1px]"></div>
+                    <span className="uppercase">Long Entry</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 bg-statusBad rounded-[2px]"></div>
-                    <span>Short Entry</span>
+                <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-statusBad rounded-[1px]"></div>
+                    <span className="uppercase">Short Entry</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 bg-gray-500 rounded-full border-2 border-gray-800"></div>
-                    <span>Exit</span>
+                <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full border border-gray-500"></div>
+                    <span className="uppercase">Exit Signal</span>
+                </div>
+                <div className="flex items-center gap-2 ml-auto">
+                    <span className="text-primary opacity-70">●</span>
+                    <span className="uppercase">Real-time Telemetry</span>
                 </div>
             </div>
         </div>
