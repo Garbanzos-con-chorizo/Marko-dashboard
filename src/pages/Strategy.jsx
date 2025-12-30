@@ -56,83 +56,70 @@ export default function Strategy() {
 
     return (
         <div className="flex flex-col gap-4">
-            <h2 style={{ fontSize: '20px', marginBottom: '16px' }}>
+            <h2 className="text-xl font-semibold mb-4">
                 Strategy State
             </h2>
 
-            <div
-                style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '16px'
-                }}
-            >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 <StatCard
                     label="Current Regime"
                     value={(regime ?? 'UNKNOWN').replace(/_/g, ' ')}
                     subValue="Markov Model State"
                 />
 
-                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div className="card flex flex-col gap-2">
+                    <div className="text-[11px] text-textMuted uppercase tracking-wider font-medium">
                         φ (Phi) • Regime Stability
                     </div>
-                    <div style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: '500' }}>
+                    <div className="text-2xl font-mono text-text font-medium">
                         {phi !== null && phi !== undefined ? phi.toFixed(3) : '—'}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <div className="text-xs text-textSecondary">
                         {getPhiLabel(phi)}
                     </div>
                 </div>
 
-                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div className="card flex flex-col gap-2">
+                    <div className="text-[11px] text-textMuted uppercase tracking-wider font-medium">
                         Volatility
                     </div>
-                    <div style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: '500' }}>
+                    <div className="text-2xl font-mono text-text font-medium">
                         {volatility !== null && volatility !== undefined ? (volatility * 100).toFixed(1) + '%' : '—'}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <div className="text-xs text-textSecondary">
                         {getVolatilityLabel(volatility)}
                     </div>
                 </div>
 
-                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div className="card flex flex-col gap-2">
+                    <div className="text-[11px] text-textMuted uppercase tracking-wider font-medium">
                         Risk Multiplier
                     </div>
-                    <div style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: '500' }}>
+                    <div className="text-2xl font-mono text-text font-medium">
                         {risk_multiplier !== null && risk_multiplier !== undefined ? risk_multiplier.toFixed(2) + 'x' : '—'}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <div className="text-xs text-textSecondary">
                         {getRiskMultiplierLabel(risk_multiplier)}
                     </div>
                 </div>
 
-                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div className="card flex flex-col gap-2">
+                    <div className="text-[11px] text-textMuted uppercase tracking-wider font-medium">
                         Conviction Score
                     </div>
-                    <div style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: '500' }}>
+                    <div className="text-2xl font-mono text-text font-medium">
                         {conviction_score !== null && conviction_score !== undefined ? (conviction_score * 100).toFixed(1) + '%' : '—'}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <div className="text-xs text-textSecondary">
                         {getConvictionLabel(conviction_score)}
                     </div>
                 </div>
             </div>
 
-            <div className="flex gap-4" style={{ marginTop: '16px' }}>
+            <div className="flex flex-col lg:flex-row gap-4 mt-4">
                 {/* Active Filters */}
-                <div className="card" style={{ flex: 1 }}>
-                    <h3
-                        style={{
-                            fontSize: '14px',
-                            color: 'var(--text-muted)',
-                            marginBottom: '16px',
-                            textTransform: 'uppercase'
-                        }}
-                    >
+                <div className="card flex-1">
+                    <h3 className="text-sm text-textMuted mb-4 uppercase tracking-wider">
                         Active Filters
                     </h3>
 
@@ -140,31 +127,13 @@ export default function Strategy() {
                         {Object.entries(filters ?? {}).map(([key, active]) => (
                             <div
                                 key={key}
-                                className="flex justify-between items-center"
-                                style={{
-                                    padding: '8px 0',
-                                    borderBottom: '1px solid var(--border-color)'
-                                }}
+                                className="flex justify-between items-center py-2 border-b border-border last:border-0"
                             >
-                                <span
-                                    className="mono"
-                                    style={{
-                                        textTransform: 'uppercase',
-                                        fontSize: '13px'
-                                    }}
-                                >
+                                <span className="font-mono text-[13px] uppercase">
                                     {key}
                                 </span>
 
-                                <span
-                                    style={{
-                                        color: active
-                                            ? 'var(--status-good)'
-                                            : 'var(--text-muted)',
-                                        fontSize: '12px',
-                                        fontWeight: '600'
-                                    }}
-                                >
+                                <span className={`text-xs font-semibold ${active ? 'text-statusGood' : 'text-textMuted'}`}>
                                     {active ? 'ACTIVE' : 'OFF'}
                                 </span>
                             </div>
@@ -173,25 +142,12 @@ export default function Strategy() {
                 </div>
 
                 {/* Last Decision */}
-                <div className="card" style={{ flex: 1 }}>
-                    <h3
-                        style={{
-                            fontSize: '14px',
-                            color: 'var(--text-muted)',
-                            marginBottom: '16px',
-                            textTransform: 'uppercase'
-                        }}
-                    >
+                <div className="card flex-1">
+                    <h3 className="text-sm text-textMuted mb-4 uppercase tracking-wider">
                         Deep Thought
                     </h3>
 
-                    <div
-                        style={{
-                            fontSize: '14px',
-                            lineHeight: '1.5',
-                            color: 'var(--text-primary)'
-                        }}
-                    >
+                    <div className="text-sm leading-relaxed text-text">
                         {last_decision
                             ? `"${last_decision}"`
                             : '—'}

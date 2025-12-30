@@ -14,7 +14,7 @@ function DashInner() {
   // Handle initial loading state where data.status is not yet available
   if (loading && !data.status) {
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
+      <div className="h-screen flex items-center justify-center bg-background text-primary font-mono animate-pulse">
         INITIALIZING MARKO-V4 TERMINAL...
       </div>
     );

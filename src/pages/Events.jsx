@@ -14,49 +14,30 @@ export default function Events() {
 
     return (
         <div className="flex flex-col gap-4">
-            <h2 style={{ fontSize: '20px', marginBottom: '16px' }}>System Logs</h2>
+            <h2 className="text-xl font-semibold mb-4">System Logs</h2>
 
-            <div className="card" style={{ padding: 0 }}>
+            <div className="card p-0">
                 {events.length === 0 ? (
-                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <div className="p-6 text-center text-textMuted">
                         No recent events logged.
                     </div>
                 ) : (
                     <div className="flex flex-col">
                         {events.map((evt, idx) => {
-                            let color = 'var(--accent-primary)';
-                            if (evt.type === 'WARN') color = 'var(--status-warn)';
-                            if (evt.type === 'ERROR') color = 'var(--status-bad)';
+                            let badgeClass = 'bg-primary text-black';
+                            if (evt.type === 'WARN') badgeClass = 'bg-statusWarn text-black';
+                            if (evt.type === 'ERROR') badgeClass = 'bg-statusBad text-white';
 
                             return (
-                                <div key={idx} className="flex gap-4" style={{
-                                    padding: '12px 16px',
-                                    borderBottom: idx === events.length - 1 ? 'none' : '1px solid var(--border-color)',
-                                    alignItems: 'flex-start'
-                                }}>
-                                    <div className="mono" style={{
-                                        fontSize: '11px',
-                                        color: 'var(--text-secondary)',
-                                        minWidth: '150px'
-                                    }}>
+                                <div key={idx} className="flex flex-col md:flex-row gap-2 md:gap-4 p-4 border-b border-border last:border-0 hover:bg-surfaceHighlight/30 transition-colors">
+                                    <div className="font-mono text-[11px] text-textSecondary min-w-[150px] shrink-0">
                                         {new Date(evt.timestamp).toLocaleString()}
                                     </div>
-                                    <div style={{ flex: 1, fontSize: '13px' }}>
-                                        <span style={{
-                                            display: 'inline-block',
-                                            padding: '2px 6px',
-                                            fontSize: '10px',
-                                            borderRadius: '4px',
-                                            background: color,
-                                            color: '#000',
-                                            fontWeight: '700',
-                                            marginRight: '8px',
-                                            minWidth: '50px',
-                                            textAlign: 'center'
-                                        }}>
+                                    <div className="flex-1 text-sm break-words">
+                                        <span className={`inline-block px-2 py-0.5 text-[10px] rounded font-bold mr-2 min-w-[50px] text-center ${badgeClass}`}>
                                             {evt.type}
                                         </span>
-                                        <span style={{ color: evt.type === 'ERROR' ? 'var(--status-bad)' : 'var(--text-primary)' }}>
+                                        <span className={evt.type === 'ERROR' ? 'text-statusBad' : 'text-text'}>
                                             {evt.message}
                                         </span>
                                     </div>

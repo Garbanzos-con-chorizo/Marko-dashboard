@@ -13,29 +13,25 @@ export default function Overview() {
         refreshChart();
     }, []);
 
-    if (loading) return <div style={{ color: 'var(--text-muted)' }}>Initializing telemetry stream...</div>;
+    if (loading) return <div className="text-textMuted">Initializing telemetry stream...</div>;
     if (!status) return null;
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
+    const statusClasses = status.status === 'RUNNING'
+        ? 'bg-green-400/10 text-statusGood border-current'
+        : 'bg-red-400/10 text-statusBad border-current';
+
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-center" style={{ marginBottom: '16px' }}>
-                <h2 style={{ fontSize: '20px' }}>System Overview</h2>
-                <div style={{
-                    padding: '4px 12px',
-                    borderRadius: '16px',
-                    background: status.status === 'RUNNING' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                    color: status.status === 'RUNNING' ? 'var(--status-good)' : 'var(--status-bad)',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    border: '1px solid currentColor'
-                }}>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">System Overview</h2>
+                <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusClasses}`}>
                     {status.status}
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     label="Total Equity"
                     value={formatCurrency(status.equity)}
@@ -62,9 +58,9 @@ export default function Overview() {
             {/* Price Chart */}
             <PriceChart chartData={chartData} />
 
-            <div className="card" style={{ marginTop: '16px' }}>
-                <h3 style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase' }}>Last Engine Action</h3>
-                <div className="mono" style={{ fontSize: '16px', color: 'var(--accent-primary)' }}>
+            <div className="card mt-4">
+                <h3 className="text-sm text-textMuted mb-3 uppercase tracking-wider">Last Engine Action</h3>
+                <div className="font-mono text-base text-primary">
                     {status.lastAction}
                 </div>
             </div>

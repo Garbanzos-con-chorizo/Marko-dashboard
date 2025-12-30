@@ -180,8 +180,8 @@ export default function PriceChart({ chartData }) {
 
     if (!chartData || !Array.isArray(chartData.bars) || chartData.bars.length === 0) {
         return (
-            <div className="card" style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+            <div className="card h-[400px] flex items-center justify-center">
+                <div className="text-textMuted text-sm">
                     No chart data available
                 </div>
             </div>
@@ -189,35 +189,34 @@ export default function PriceChart({ chartData }) {
     }
 
     return (
-        <div className="card" style={{ padding: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 style={{ fontSize: '14px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+        <div className="card p-4">
+            <div className="flex justify-between items-center mb-3">
+                <h3 className="text-sm text-textMuted uppercase tracking-wider">
                     {chartData.symbol || 'Price Chart'} • {chartData.timeframe || '1m'}
                 </h3>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                <div className="text-xs text-textSecondary">
                     {chartData.bars.length} bars
                 </div>
             </div>
-            <canvas
-                ref={canvasRef}
-                style={{
-                    width: '100%',
-                    height: '400px',
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    borderRadius: '4px'
-                }}
-            />
-            <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '12px', height: '12px', background: '#10b981', borderRadius: '2px' }}></div>
+
+            <div className="relative w-full h-[400px]">
+                <canvas
+                    ref={canvasRef}
+                    className="w-full h-full bg-black/20 rounded"
+                />
+            </div>
+
+            <div className="flex gap-4 mt-3 text-[11px] text-textMuted">
+                <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 bg-statusGood rounded-[2px]"></div>
                     <span>Long Entry</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '12px', height: '12px', background: '#ef4444', borderRadius: '2px' }}></div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 bg-statusBad rounded-[2px]"></div>
                     <span>Short Entry</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '12px', height: '12px', background: '#6b7280', borderRadius: '50%', border: '2px solid #1f2937' }}></div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 bg-gray-500 rounded-full border-2 border-gray-800"></div>
                     <span>Exit</span>
                 </div>
             </div>
