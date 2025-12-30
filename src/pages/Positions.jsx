@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 
 export default function Positions() {
-    const { data } = useTelemetry();
+    const { data, refreshTelemetry } = useTelemetry();
 
     const rawPositions = data?.positions;
     const status = data?.status;
+
+    // Refresh data when page loads
+    useEffect(() => {
+        refreshTelemetry();
+    }, []);
 
     // Normalize positions to array (CRITICAL FIX)
     const positions = Array.isArray(rawPositions)

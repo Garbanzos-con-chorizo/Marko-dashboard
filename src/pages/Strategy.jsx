@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 import StatCard from '../components/StatCard';
 
@@ -32,10 +32,15 @@ const getConvictionLabel = (conviction) => {
 };
 
 export default function Strategy() {
-    const { data } = useTelemetry();
+    const { data, refreshTelemetry } = useTelemetry();
 
     // Defensive destructuring
     const strategy = data?.strategy;
+
+    // Refresh data when page loads
+    useEffect(() => {
+        refreshTelemetry();
+    }, []);
 
     if (!strategy) return null;
 

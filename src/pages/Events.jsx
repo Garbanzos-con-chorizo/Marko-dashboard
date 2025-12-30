@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 
 export default function Events() {
-    const { data } = useTelemetry();
+    const { data, refreshTelemetry } = useTelemetry();
     const { events } = data;
+
+    // Refresh data when page loads
+    useEffect(() => {
+        refreshTelemetry();
+    }, []);
 
     if (!events) return null;
 

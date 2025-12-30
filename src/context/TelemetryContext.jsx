@@ -19,49 +19,64 @@ export const TelemetryProvider = ({ children }) => {
     // Improve polling consistency with a ref to track mounting
     const isMounted = useRef(true);
 
-    useEffect(() => {
-        isMounted.current = true;
-        const pollInterval = 3000; // 3 seconds
+    // Fetch functions exposed for manual refresh
+    const fetchTelemetryData = async () => {
+        try {
+            const telemetryData = await api.getTelemetry();
 
-        const fetchData = async () => {
-            try {
-                // Single telemetry call
-                const telemetryData = await api.getTelemetry();
-
-                // Check warmup state
-                if (telemetryData.status?.is_warming_up) {
-                    if (isMounted.current) {
-                        setTelemetry(telemetryData);
-                        setLoading(false);
-                        setError(null);
-                        setLastUpdated(new Date());
-                    }
-                    return; // Skip further processing during warmup
-                }
-
-                // Normal operation - all data already transformed
+            // Check warmup state
+            if (telemetryData.status?.is_warming_up) {
                 if (isMounted.current) {
                     setTelemetry(telemetryData);
+                    setLoading(false);
                     setError(null);
                     setLastUpdated(new Date());
                 }
-            } catch (err) {
-                if (isMounted.current) {
-                    console.error('Telemetry Fetch Error:', err);
-                    setError(err.message || 'Failed to fetch telemetry');
-                }
-            } finally {
-                if (isMounted.current) {
-                    setLoading(false);
-                }
+                return;
             }
-        };
+
+            // Normal operation - all data already transformed
+            if (isMounted.current) {
+                setTelemetry(telemetryData);
+                setError(null);
+                setLastUpdated(new Date());
+            }
+        } catch (err) {
+            if (isMounted.current) {
+                console.error('Telemetry Fetch Error:', err);
+                setError(err.message || 'Failed to fetch telemetry');
+            }
+        } finally {
+            if (isMounted.current) {
+                setLoading(false);
+            }
+        }
+    };
+
+    const fetchChartDataManual = async () => {
+        try {
+            const data = await api.getChartData();
+            if (isMounted.current) {
+                setChartData(data);
+                setChartError(null);
+            }
+        } catch (err) {
+            if (isMounted.current) {
+                console.error('Chart Fetch Error:', err);
+                setChartError(err.message || 'Failed to fetch chart data');
+            }
+        }
+    };
+
+    useEffect(() => {
+        isMounted.current = true;
+        const pollInterval = 840000; // 14 minutes
 
         // Initial fetch
-        fetchData();
+        fetchTelemetryData();
 
         // Set up polling
-        const intervalId = setInterval(fetchData, pollInterval);
+        const intervalId = setInterval(fetchTelemetryData, pollInterval);
 
         return () => {
             isMounted.current = false;
@@ -71,29 +86,14 @@ export const TelemetryProvider = ({ children }) => {
 
     // Separate polling for chart data (less frequent)
     useEffect(() => {
-        const chartPollInterval = 10000; // 10 seconds
+        const chartPollInterval = 840000; // 14 minutes
         let chartIntervalId;
 
-        const fetchChartData = async () => {
-            try {
-                const data = await api.getChartData();
-                if (isMounted.current) {
-                    setChartData(data);
-                    setChartError(null);
-                }
-            } catch (err) {
-                if (isMounted.current) {
-                    console.error('Chart Fetch Error:', err);
-                    setChartError(err.message || 'Failed to fetch chart data');
-                }
-            }
-        };
-
         // Initial fetch
-        fetchChartData();
+        fetchChartDataManual();
 
         // Set up polling
-        chartIntervalId = setInterval(fetchChartData, chartPollInterval);
+        chartIntervalId = setInterval(fetchChartDataManual, chartPollInterval);
 
         return () => {
             if (chartIntervalId) {
@@ -109,6 +109,8 @@ export const TelemetryProvider = ({ children }) => {
         error,
         chartError,
         lastUpdated,
+        refreshTelemetry: fetchTelemetryData,
+        refreshChart: fetchChartDataManual,
     };
 
     return (

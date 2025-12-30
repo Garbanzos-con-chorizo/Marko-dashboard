@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 import StatCard from '../components/StatCard';
 import PriceChart from '../components/PriceChart';
 
 export default function Overview() {
-    const { data, chartData, loading } = useTelemetry();
+    const { data, chartData, loading, refreshTelemetry, refreshChart } = useTelemetry();
     const { status, strategy } = data;
+
+    // Refresh data when page loads
+    useEffect(() => {
+        refreshTelemetry();
+        refreshChart();
+    }, []);
 
     if (loading) return <div style={{ color: 'var(--text-muted)' }}>Initializing telemetry stream...</div>;
     if (!status) return null;
