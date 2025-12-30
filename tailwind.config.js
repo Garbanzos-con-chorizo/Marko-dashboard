@@ -13,6 +13,7 @@ export default {
                 border: 'var(--border-color)',
                 primary: 'var(--accent-primary)',
                 text: 'var(--text-primary)',
+                textSecondary: 'var(--text-secondary)',
                 textMuted: 'var(--text-muted)',
                 statusGood: 'var(--status-good)',
                 statusWarn: 'var(--status-warn)',

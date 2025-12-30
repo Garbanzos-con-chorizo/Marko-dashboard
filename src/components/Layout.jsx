@@ -1,100 +1,147 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
-
 import { NavLink } from 'react-router-dom';
+import {
+    LayoutDashboard,
+    Cpu,
+    Layers,
+    ScrollText,
+    ChevronLeft,
+    ChevronRight,
+    Activity
+} from 'lucide-react';
 
-const SidebarLink = ({ to, label }) => (
+const SidebarLink = ({ to, label, icon: Icon, isCollapsed }) => (
     <NavLink
         to={to}
-        style={({ isActive }) => ({
-            display: 'block',
-            width: '100%',
-            textAlign: 'left',
-            background: isActive ? 'var(--bg-tertiary)' : 'transparent',
-            color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-            border: 'none',
-            borderLeft: isActive ? '3px solid var(--accent-primary)' : '3px solid transparent',
-            padding: '12px 16px',
-            cursor: 'pointer',
-            fontFamily: 'var(--font-sans)',
-            fontSize: '14px',
-            fontWeight: '500',
-            transition: 'all 0.2s ease',
-            textDecoration: 'none'
-        })}
+        className={({ isActive }) => `
+            flex items-center gap-3 px-3 py-3 mx-2 rounded-md transition-all duration-200
+            ${isActive
+                ? 'bg-surfaceHighlight text-text border-l-2 border-primary'
+                : 'text-textSecondary hover:bg-surfaceHighlight/50 hover:text-text'
+            }
+            ${isActive && !isCollapsed ? 'pl-2' : ''}
+            ${isCollapsed ? 'justify-center' : ''}
+        `}
+        title={isCollapsed ? label : ''}
     >
-        {label}
+        <Icon size={20} className="shrink-0" />
+        {!isCollapsed && (
+            <span className="text-sm font-medium tracking-wide whitespace-nowrap overflow-hidden">
+                {label}
+            </span>
+        )}
     </NavLink>
 );
 
 export default function Layout({ children }) {
     const { lastUpdated, error } = useTelemetry();
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
+    // Auto-collapse on mobile devices on mount
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < 768) {
+                setIsCollapsed(true);
+            }
+        };
+
+        // Initial check
+        handleResize();
+
+        // Optional: listen to resize events, though might be annoying if resizing window on desktop
+        // window.addEventListener('resize', handleResize);
+        // return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     return (
-        <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
+        <div className="flex h-screen w-screen overflow-hidden bg-background text-text font-sans">
             {/* Sidebar */}
-            <aside style={{
-                width: '240px',
-                background: 'var(--bg-secondary)',
-                borderRight: '1px solid var(--border-color)',
-                display: 'flex',
-                flexDirection: 'column',
-                flexShrink: 0
-            }}>
-                <div style={{ padding: '24px', borderBottom: '1px solid var(--border-color)' }}>
-                    <h1 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '12px', height: '12px', background: 'var(--accent-primary)', borderRadius: '2px' }}></div>
-                        MARKO V4
-                    </h1>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                        ALGORITHMIC TRADING
+            <aside
+                className={`
+                    flex flex-col border-r border-border bg-surface transition-all duration-300 ease-in-out
+                    ${isCollapsed ? 'w[60px]' : 'w-[240px]'}
+                    shrink-0 relative
+                `}
+                // Tailwind v4 specific width handling if needed, but standard w- works
+                style={{ width: isCollapsed ? '64px' : '240px' }}
+            >
+                {/* Header */}
+                <div className={`
+                    h-[60px] flex items-center border-b border-border overflow-hidden
+                    ${isCollapsed ? 'justify-center px-0' : 'px-6'}
+                `}>
+                    <div className="flex items-center gap-2 text-primary">
+                        <div className="w-3 h-3 bg-primary rounded-[2px] shrink-0"></div>
+                        {!isCollapsed && (
+                            <div className="flex flex-col">
+                                <h1 className="text-sm font-bold tracking-wider text-text">MARKO V4</h1>
+                                <span className="text-[9px] text-textMuted leading-none">ALGORITHMIC TRADING</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <nav style={{ flex: 1, padding: '16px 0' }}>
-                    <SidebarLink to="/overview" label="OVERVIEW" />
-                    <SidebarLink to="/strategy" label="STRATEGY" />
-                    <SidebarLink to="/positions" label="POSITIONS" />
-                    <SidebarLink to="/events" label="EVENTS / LOGS" />
+                {/* Navigation */}
+                <nav className="flex-1 py-4 flex flex-col gap-1 overflow-y-auto overflow-x-hidden">
+                    <SidebarLink to="/overview" label="OVERVIEW" icon={LayoutDashboard} isCollapsed={isCollapsed} />
+                    <SidebarLink to="/strategy" label="STRATEGY" icon={Cpu} isCollapsed={isCollapsed} />
+                    <SidebarLink to="/positions" label="POSITIONS" icon={Layers} isCollapsed={isCollapsed} />
+                    <SidebarLink to="/events" label="EVENTS / LOGS" icon={ScrollText} isCollapsed={isCollapsed} />
                 </nav>
 
-                <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)', fontSize: '11px' }}>
-                    <div style={{ color: 'var(--text-muted)', marginBottom: '4px' }}>STATUS</div>
-                    {error ? (
-                        <div style={{ color: 'var(--status-bad)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'currentColor' }}></span>
-                            API ERROR
-                        </div>
+                {/* Footer / Status */}
+                <div className="p-3 border-t border-border bg-surface text-[10px]">
+                    {!isCollapsed ? (
+                        <>
+                            <div className="text-textMuted mb-1 font-medium">STATUS</div>
+                            {error ? (
+                                <div className="flex items-center gap-2 text-statusBad font-medium">
+                                    <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+                                    <span>API ERROR</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2 text-statusGood font-medium">
+                                    <span className="w-2 h-2 rounded-full bg-current"></span>
+                                    <span>SYSTEM ONLINE</span>
+                                </div>
+                            )}
+                            <div className="mt-2 text-textMuted font-mono">
+                                UP: {lastUpdated ? lastUpdated.toLocaleTimeString() : '--:--:--'}
+                            </div>
+                        </>
                     ) : (
-                        <div style={{ color: 'var(--status-good)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'currentColor' }}></span>
-                            SYSTEM ONLINE
+                        <div className="flex flex-col items-center gap-2">
+                            <div
+                                className={`w-2 h-2 rounded-full ${error ? 'bg-statusBad animate-pulse' : 'bg-statusGood'}`}
+                                title={error ? 'API Error' : 'System Online'}
+                            />
+                            <Activity size={14} className="text-textMuted op-50" />
                         </div>
                     )}
-                    <div style={{ marginTop: '8px', color: 'var(--text-muted)' }}>
-                        LAST UPD: {lastUpdated ? lastUpdated.toLocaleTimeString() : '--:--:--'}
-                    </div>
                 </div>
+
+                {/* Toggle Button */}
+                <button
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className="absolute -right-3 top-16 w-6 h-6 bg-surface border border-border rounded-full flex items-center justify-center text-textSecondary hover:text-primary transition-colors cursor-pointer z-10 shadow-sm"
+                    title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                >
+                    {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                </button>
             </aside>
 
             {/* Main Content */}
-            <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', position: 'relative' }}>
+            <main className="flex-1 overflow-auto bg-background relative flex flex-col">
                 {/* Error Banner */}
                 {error && (
-                    <div style={{
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        borderBottom: '1px solid var(--status-bad)',
-                        color: 'var(--status-bad)',
-                        padding: '8px 16px',
-                        fontSize: '12px',
-                        display: 'flex',
-                        justifyContent: 'center'
-                    }}>
-                        ⚠️ CONNECTION LOST. DISPLAYING STALE DATA.
+                    <div className="bg-red-500/10 border-b border-statusBad text-statusBad px-4 py-2 text-xs font-semibold flex items-center justify-center gap-2">
+                        <Activity size={14} />
+                        <span>CONNECTION LOST. DISPLAYING STALE DATA.</span>
                     </div>
                 )}
 
-                <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
+                <div className="flex-1 p-4 md:p-8 max-w-[1600px] mx-auto w-full">
                     {children}
                 </div>
             </main>
