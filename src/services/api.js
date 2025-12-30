@@ -133,7 +133,7 @@ const generateChartData = () => {
   // Generate 100 bars (candlesticks) with realistic price movement
   let basePrice = 67000;
   for (let i = 99; i >= 0; i--) {
-    const ts = now - (i * 60000); // 1-minute bars
+    const ts = now - (i * 3600000); // 1-hour bars
     const volatility = Math.random() * 200;
     const open = basePrice;
     const close = basePrice + (Math.random() - 0.5) * volatility;

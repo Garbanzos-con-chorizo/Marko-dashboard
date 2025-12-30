@@ -104,16 +104,21 @@ export default function PriceChart({ chartData }) {
             ctx.fillText(tick.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }), width - chartPadding.right + 10, y + 4);
         });
 
-        // Horizontal Ticks (Time) - Hourly Logic
-        const labelInterval = Math.max(1, Math.floor(bars.length / 8));
+        // Horizontal Ticks (Time) - Smart Spacing Logic
+        const minPixelsBetweenLabels = 70;
+        let lastLabelX = -minPixelsBetweenLabels;
+
         bars.forEach((bar, i) => {
-            // Show label every X bars OR if it's the start of a new day/specific hour
+            const x = tsToX(i);
             const date = new Date(bar.ts);
+
+            // Priority: Start of day > Start of hour > Interval-based
+            const isDayStart = date.getHours() === 0 && date.getMinutes() === 0;
             const isHourStart = date.getMinutes() === 0;
+            const isSignificant = isDayStart || isHourStart;
 
-            if (i % labelInterval === 0 || isHourStart) {
-                const x = tsToX(i);
-
+            // Only draw if we have enough space
+            if (x - lastLabelX >= minPixelsBetweenLabels && (isSignificant || i === bars.length - 1)) {
                 // Fine grid
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
                 ctx.beginPath();
@@ -127,10 +132,13 @@ export default function PriceChart({ chartData }) {
                 const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
                 ctx.fillText(timeStr, x, chartPadding.top + innerHeight + 20);
 
-                // Add Date if it's 00:00
-                if (date.getHours() === 0 && date.getMinutes() === 0) {
+                // Add Date context if it's start of day OR first label OR enough space
+                if (isDayStart) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
                     ctx.fillText(date.toLocaleDateString([], { month: 'short', day: 'numeric' }), x, chartPadding.top + innerHeight + 32);
                 }
+
+                lastLabelX = x;
             }
         });
 
