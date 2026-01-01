@@ -13,21 +13,24 @@ const generateStrategyList = () => {
       symbol: "BTC/USD",
       timeframe: "1h",
       status: "RUNNING",
-      active_pnl: 1250.50
+      active_pnl: 1250.50,
+      params: { window: 20, multiplier: 2.0 }
     },
     {
       id: "MeanRev_ETH_15m",
       symbol: "ETH/USD",
       timeframe: "15m",
       status: "RUNNING",
-      active_pnl: -320.10
+      active_pnl: -320.10,
+      params: { rsi_period: 14, overbought: 70 }
     },
     {
       id: "Arb_SOL_5m",
       symbol: "SOL/USD",
       timeframe: "5m",
       status: "STOPPED",
-      active_pnl: 45.00
+      active_pnl: 45.00,
+      params: { spread_threshold: 0.5 }
     }
   ];
 };
@@ -46,7 +49,7 @@ const generateTelemetry = (strategyId = 'legacy') => {
   return {
     timestamp: new Date().toISOString(),
     version: "2.0",
-    instance_id: strategyId, // New V2 field
+    instance_id: strategyId,
     engine: {
       status: isWarmingUp ? 'STARTING' : 'RUNNING',
       uptime_seconds: elapsed / 1000,
@@ -58,9 +61,10 @@ const generateTelemetry = (strategyId = 'legacy') => {
       warmup_progress: progress,
       warmup_remaining_seconds: isWarmingUp ? Math.max(0, (MOCK_WARMUP_DURATION - elapsed) / 1000) : null
     },
+    // Strategy matches StrategyState schema
     strategy: {
       name: strategyId === 'legacy' ? 'MARKO_V4' : strategyId,
-      regime: isWarmingUp ? null : 'VOLATILITY_EXPANSION',
+      markov_state: isWarmingUp ? null : 'VOLATILITY_EXPANSION', // "regime" in V1, "markov_state" in V2/Shared
       phi: isWarmingUp ? null : 0.85,
       volatility: isWarmingUp ? null : 0.22,
       risk_multiplier: isWarmingUp ? null : 1.2,
@@ -68,6 +72,7 @@ const generateTelemetry = (strategyId = 'legacy') => {
       active_filters: isWarmingUp ? [] : ['trend', 'volatility'],
       last_decision: isWarmingUp ? 'WAIT' : 'REBALANCE'
     },
+    // PortfolioSnapshot
     portfolio: {
       total_equity: 124500.00 + (Math.random() * 100 - 50),
       cash: 50000,
@@ -93,38 +98,53 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // Transform backend response to frontend format
 function transformTelemetry(raw) {
+  // Detect if raw is the full snapshot OR just the flattened StrategyState (V2 ambiguous case)
+  // If 'markov_state' is at root, treat as flat StrategyState
+  let strategyData = raw.strategy;
+  let engineData = raw.engine;
+  let portfolioData = raw.portfolio;
+
+  if (!strategyData && raw.markov_state) {
+    // V2 Flat Response Detected
+    strategyData = raw;
+    // Engine/Portfolio are missing in flat response, so we default them or leave them empty.
+    // This allows the Strategy Detail view to work partially even if full snapshot isn't sent.
+    engineData = { status: 'UNKNOWN' }; // Fallback
+    portfolioData = { total_equity: 0, positions: [] }; // Fallback
+  }
+
   // Convert active_filters array to object format
   const filtersObj = {};
-  if (raw.strategy?.active_filters) {
-    raw.strategy.active_filters.forEach(filter => {
+  if (strategyData?.active_filters && Array.isArray(strategyData.active_filters)) {
+    strategyData.active_filters.forEach(filter => {
       filtersObj[filter] = true;
     });
   }
 
   return {
     status: {
-      status: raw.engine?.status || 'UNKNOWN',
-      is_warming_up: raw.engine?.is_warming_up || false,
-      warmup_progress: raw.engine?.warmup_progress || 0,
-      warmup_remaining_est: raw.engine?.warmup_remaining_seconds || 0,
-      heartbeat: raw.engine?.last_heartbeat,
-      equity: raw.portfolio?.total_equity || 0,
-      unrealizedPnL: raw.portfolio?.positions?.reduce((sum, pos) => sum + (pos.unrealized_pnl || 0), 0) || 0,
-      openPositionsCount: raw.portfolio?.positions?.length || 0,
-      lastAction: raw.strategy?.last_decision || 'WAIT',
+      status: engineData?.status || 'UNKNOWN',
+      is_warming_up: engineData?.is_warming_up || false,
+      warmup_progress: engineData?.warmup_progress || 0,
+      warmup_remaining_est: engineData?.warmup_remaining_seconds || 0,
+      heartbeat: engineData?.last_heartbeat,
+      equity: portfolioData?.total_equity || 0,
+      unrealizedPnL: portfolioData?.positions?.reduce((sum, pos) => sum + (pos.unrealized_pnl || 0), 0) || 0,
+      openPositionsCount: portfolioData?.positions?.length || 0,
+      lastAction: strategyData?.last_decision || 'WAIT',
       instanceId: raw.instance_id // Capture V2 instance ID
     },
     strategy: {
-      name: raw.strategy?.name || 'Unknown Strategy',
-      regime: raw.strategy?.regime || raw.strategy?.markov_state || 'UNKNOWN',
-      phi: raw.strategy?.phi ?? null,
-      volatility: raw.strategy?.volatility ?? null,
-      conviction_score: raw.strategy?.conviction_score ?? 0,
-      risk_multiplier: raw.strategy?.risk_multiplier ?? 1,
+      name: strategyData?.name || 'Unknown Strategy',
+      regime: strategyData?.markov_state || strategyData?.regime || 'UNKNOWN', // Prioritize markov_state
+      phi: strategyData?.phi ?? null,
+      volatility: strategyData?.volatility ?? null,
+      conviction_score: strategyData?.conviction_score ?? 0,
+      risk_multiplier: strategyData?.risk_multiplier ?? 1,
       filters: filtersObj,
-      last_decision: raw.strategy?.last_decision || 'No recent decision'
+      last_decision: strategyData?.last_decision || 'No recent decision'
     },
-    positions: (raw.portfolio?.positions || []).map(pos => ({
+    positions: (portfolioData?.positions || []).map(pos => ({
       symbol: pos.symbol,
       size: pos.qty,
       avgPrice: pos.avg_entry_price,
