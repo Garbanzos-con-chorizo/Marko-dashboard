@@ -4,15 +4,49 @@ const IS_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 const MOCK_START_TIME = Date.now();
 const MOCK_WARMUP_DURATION = 8000; // 8 seconds
 
+// --- Mock Data Generators ---
+
+const generateStrategyList = () => {
+  return [
+    {
+      id: "Trend_BTC_1h",
+      symbol: "BTC/USD",
+      timeframe: "1h",
+      status: "RUNNING",
+      active_pnl: 1250.50
+    },
+    {
+      id: "MeanRev_ETH_15m",
+      symbol: "ETH/USD",
+      timeframe: "15m",
+      status: "RUNNING",
+      active_pnl: -320.10
+    },
+    {
+      id: "Arb_SOL_5m",
+      symbol: "SOL/USD",
+      timeframe: "5m",
+      status: "STOPPED",
+      active_pnl: 45.00
+    }
+  ];
+};
+
 // Mock telemetry generator matching backend structure
-const generateTelemetry = () => {
+const generateTelemetry = (strategyId = 'legacy') => {
   const elapsed = Date.now() - MOCK_START_TIME;
   const isWarmingUp = elapsed < MOCK_WARMUP_DURATION;
   const progress = Math.min((elapsed / MOCK_WARMUP_DURATION), 1.0);
 
+  // Vary data based on strategyId if needed for realism
+  const isEth = strategyId.includes('ETH');
+  const symbol = isEth ? 'ETH-USD' : 'BTC-USD';
+  const price = isEth ? 3500 : 67400;
+
   return {
     timestamp: new Date().toISOString(),
-    version: "1.0",
+    version: "2.0",
+    instance_id: strategyId, // New V2 field
     engine: {
       status: isWarmingUp ? 'STARTING' : 'RUNNING',
       uptime_seconds: elapsed / 1000,
@@ -25,7 +59,7 @@ const generateTelemetry = () => {
       warmup_remaining_seconds: isWarmingUp ? Math.max(0, (MOCK_WARMUP_DURATION - elapsed) / 1000) : null
     },
     strategy: {
-      name: 'MARKO_V4',
+      name: strategyId === 'legacy' ? 'MARKO_V4' : strategyId,
       regime: isWarmingUp ? null : 'VOLATILITY_EXPANSION',
       phi: isWarmingUp ? null : 0.85,
       volatility: isWarmingUp ? null : 0.22,
@@ -39,13 +73,11 @@ const generateTelemetry = () => {
       cash: 50000,
       total_exposure_pct: isWarmingUp ? 0 : 0.6,
       positions: isWarmingUp ? [] : [
-        { symbol: 'BTC-USD', qty: 0.5, avg_entry_price: 65000, current_price: 67400, unrealized_pnl: 1200, market_value: 33700 },
-        { symbol: 'ETH-USD', qty: 10, avg_entry_price: 3500, current_price: 3480, unrealized_pnl: -200, market_value: 34800 },
-        { symbol: 'SOL-USD', qty: 150, avg_entry_price: 145, current_price: 145.33, unrealized_pnl: 50, market_value: 21800 }
+        { symbol: symbol, qty: isEth ? 10 : 0.5, avg_entry_price: price * 0.98, current_price: price, unrealized_pnl: 1000, market_value: 30000 },
       ]
     },
     recent_orders: isWarmingUp ? [] : [
-      { order_id: 'ord_123', client_order_id: null, symbol: 'BTC-USD', side: 'BUY', qty: 0.5, status: 'FILLED', timestamp: new Date(Date.now() - 3600000).toISOString(), price: 65000 }
+      { order_id: 'ord_123', client_order_id: null, symbol: symbol, side: 'BUY', qty: 0.5, status: 'FILLED', timestamp: new Date(Date.now() - 3600000).toISOString(), price: price * 0.98 }
     ],
     events: [
       { timestamp: new Date().toISOString(), type: 'INFO', message: isWarmingUp ? 'SYNCING_HISTORY' : 'Heartbeat received' },
@@ -79,9 +111,11 @@ function transformTelemetry(raw) {
       equity: raw.portfolio?.total_equity || 0,
       unrealizedPnL: raw.portfolio?.positions?.reduce((sum, pos) => sum + (pos.unrealized_pnl || 0), 0) || 0,
       openPositionsCount: raw.portfolio?.positions?.length || 0,
-      lastAction: raw.strategy?.last_decision || 'WAIT'
+      lastAction: raw.strategy?.last_decision || 'WAIT',
+      instanceId: raw.instance_id // Capture V2 instance ID
     },
     strategy: {
+      name: raw.strategy?.name || 'Unknown Strategy',
       regime: raw.strategy?.regime || raw.strategy?.markov_state || 'UNKNOWN',
       phi: raw.strategy?.phi ?? null,
       volatility: raw.strategy?.volatility ?? null,
@@ -102,13 +136,16 @@ function transformTelemetry(raw) {
   };
 }
 
-async function fetchTelemetry() {
+async function fetchTelemetry(strategyId = null) {
   if (IS_MOCK) {
     await sleep(MOCK_DELAY);
-    return transformTelemetry(generateTelemetry());
+    return transformTelemetry(generateTelemetry(strategyId || 'legacy'));
   }
 
-  const url = `${API_BASE_URL}/api/v1/telemetry`;
+  // Route to V2 if ID is provided, else V1
+  const url = strategyId
+    ? `${API_BASE_URL}/api/v2/strategies/${strategyId}/telemetry`
+    : `${API_BASE_URL}/api/v1/telemetry`;
 
   try {
     const response = await fetch(url);
@@ -123,22 +160,27 @@ async function fetchTelemetry() {
   }
 }
 
-// Mock chart data generator matching /api/chart contract
-const generateChartData = () => {
+// Mock chart data generator matching /api/chart (and V2) contract
+const generateChartData = (strategyId = 'legacy') => {
   const now = Date.now();
   const bars = [];
   const entries = [];
   const exits = [];
 
+  // V2: Customize chart based on strategy
+  const isEth = strategyId.includes('ETH');
+  const isSol = strategyId.includes('SOL');
+  let basePrice = isEth ? 3500 : (isSol ? 145 : 67000);
+  const symbol = isEth ? 'ETH/USD' : (isSol ? 'SOL/USD' : 'BTC/USD');
+
   // Generate 100 bars (candlesticks) with realistic price movement
-  let basePrice = 67000;
   for (let i = 99; i >= 0; i--) {
     const ts = now - (i * 3600000); // 1-hour bars
-    const volatility = Math.random() * 200;
+    const volatility = basePrice * 0.005; // 0.5% volatility
     const open = basePrice;
     const close = basePrice + (Math.random() - 0.5) * volatility;
-    const high = Math.max(open, close) + Math.random() * 100;
-    const low = Math.min(open, close) - Math.random() * 100;
+    const high = Math.max(open, close) + Math.random() * (volatility * 0.5);
+    const low = Math.min(open, close) - Math.random() * (volatility * 0.5);
     const volume = Math.random() * 10 + 5;
 
     bars.push({ ts, open, high, low, close, volume });
@@ -157,8 +199,8 @@ const generateChartData = () => {
   }
 
   return {
-    symbol: 'BTC/USD',
-    timeframe: '1m',
+    symbol: symbol,
+    timeframe: '1h', // Could vary this based on ID parsing
     bars,
     overlays: {
       entries,
@@ -172,13 +214,16 @@ const generateChartData = () => {
   };
 };
 
-async function fetchChartData() {
+async function fetchChartData(strategyId = null) {
   if (IS_MOCK) {
     await sleep(MOCK_DELAY);
-    return generateChartData();
+    return generateChartData(strategyId || 'legacy');
   }
 
-  const url = `${API_BASE_URL}/api/chart`;
+  // Route to V2 if ID is provided, else V1
+  const url = strategyId
+    ? `${API_BASE_URL}/api/v2/strategies/${strategyId}/chart`
+    : `${API_BASE_URL}/api/chart`;
 
   try {
     const response = await fetch(url);
@@ -213,7 +258,54 @@ async function fetchChartData() {
   }
 }
 
+// --- New V2 Methods ---
+
+async function fetchStrategies() {
+  if (IS_MOCK) {
+    await sleep(MOCK_DELAY);
+    return generateStrategyList();
+  }
+
+  const url = `${API_BASE_URL}/api/v2/strategies`;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`Fetch failed for ${url}:`, error);
+    throw error;
+  }
+}
+
+async function controlStrategy(id, action) {
+  if (IS_MOCK) {
+    await sleep(MOCK_DELAY);
+    console.log(`[MOCK] Control strategy ${id} action: ${action}`);
+    return { success: true, message: `Strategy ${id} ${action}ed` };
+  }
+
+  const url = `${API_BASE_URL}/api/v2/strategies/${id}/control`;
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    });
+    if (!response.ok) {
+      throw new Error(`Control Error: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`Control failed for ${id}:`, error);
+    throw error;
+  }
+}
+
 export const api = {
   getTelemetry: fetchTelemetry,
-  getChartData: fetchChartData
+  getChartData: fetchChartData,
+  getStrategies: fetchStrategies,
+  controlStrategy: controlStrategy
 };

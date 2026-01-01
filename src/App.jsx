@@ -1,11 +1,13 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { StrategyProvider } from './context/StrategyContext';
 import { TelemetryProvider, useTelemetry } from './context/TelemetryContext';
 import Layout from './components/Layout';
 import Overview from './pages/Overview';
 import Strategy from './pages/Strategy';
 import Positions from './pages/Positions';
 import Events from './pages/Events';
+import Strategies from './pages/Strategies';
 import WarmupOverlay from './components/WarmupOverlay';
 
 function DashInner() {
@@ -30,6 +32,7 @@ function DashInner() {
       <Routes>
         <Route path="/" element={<Navigate to="/overview" replace />} />
         <Route path="/overview" element={<Overview />} />
+        <Route path="/strategies" element={<Strategies />} />
         <Route path="/strategy" element={<Strategy />} />
         <Route path="/positions" element={<Positions />} />
         <Route path="/events" element={<Events />} />
@@ -42,9 +45,11 @@ function DashInner() {
 function App() {
   return (
     <BrowserRouter>
-      <TelemetryProvider>
-        <DashInner />
-      </TelemetryProvider>
+      <StrategyProvider>
+        <TelemetryProvider>
+          <DashInner />
+        </TelemetryProvider>
+      </StrategyProvider>
     </BrowserRouter>
   );
 }

@@ -1,9 +1,13 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { api } from '../services/api';
+import { useStrategy } from './StrategyContext';
 
 const TelemetryContext = createContext(null);
 
 export const TelemetryProvider = ({ children }) => {
+    // Access strategy context to get current selection
+    const { selectedStrategyId } = useStrategy();
+
     const [telemetry, setTelemetry] = useState({
         status: null,
         strategy: null,
@@ -22,7 +26,8 @@ export const TelemetryProvider = ({ children }) => {
     // Fetch functions exposed for manual refresh
     const fetchTelemetryData = async () => {
         try {
-            const telemetryData = await api.getTelemetry();
+            // Pass selectedStrategyId to api
+            const telemetryData = await api.getTelemetry(selectedStrategyId);
 
             // Check warmup state
             if (telemetryData.status?.is_warming_up) {
@@ -48,6 +53,7 @@ export const TelemetryProvider = ({ children }) => {
             }
         } finally {
             if (isMounted.current) {
+                // Only unset loading if we have some data or error
                 setLoading(false);
             }
         }
@@ -55,7 +61,8 @@ export const TelemetryProvider = ({ children }) => {
 
     const fetchChartDataManual = async () => {
         try {
-            const data = await api.getChartData();
+            // Pass selectedStrategyId to api
+            const data = await api.getChartData(selectedStrategyId);
             if (isMounted.current) {
                 setChartData(data);
                 setChartError(null);
@@ -68,38 +75,37 @@ export const TelemetryProvider = ({ children }) => {
         }
     };
 
+    // Effect to handle strategy changes and polling
     useEffect(() => {
         isMounted.current = true;
-        const pollInterval = 840000; // 14 minutes
+        setLoading(true); // Show loading when switching strategies
 
-        // Initial fetch
+        // Use a faster poll interval for telemetry (e.g., 5s) instead of 14m
+        const pollInterval = 5000;
+
+        // Initial fetch when ID changes
         fetchTelemetryData();
-
-        // Set up polling
-        const intervalId = setInterval(fetchTelemetryData, pollInterval);
-
-        return () => {
-            isMounted.current = false;
-            clearInterval(intervalId);
-        };
-    }, []);
-
-    // Separate polling for chart data (less frequent)
-    useEffect(() => {
-        const chartPollInterval = 840000; // 14 minutes
-        let chartIntervalId;
-
-        // Initial fetch
         fetchChartDataManual();
 
         // Set up polling
-        chartIntervalId = setInterval(fetchChartDataManual, chartPollInterval);
+        const intervalId = setInterval(() => {
+            fetchTelemetryData();
+            fetchChartDataManual();
+        }, pollInterval);
 
         return () => {
-            if (chartIntervalId) {
-                clearInterval(chartIntervalId);
-            }
+            clearInterval(intervalId);
+            // We don't set isMounted.current = false here because 
+            // the component might just be re-running the effect due to ID change, not unmounting.
+            // isMounted should be handled in a separate "mount" effect or just careful usage.
+            // Actually, cleanest is to trust the closure.
         };
+    }, [selectedStrategyId]);
+
+    // Proper cleanup on unmount
+    useEffect(() => {
+        isMounted.current = true;
+        return () => { isMounted.current = false; };
     }, []);
 
     const value = {
