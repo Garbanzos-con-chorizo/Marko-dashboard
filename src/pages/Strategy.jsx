@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 import StatCard from '../components/StatCard';
+import { AlertCircle, Loader } from 'lucide-react';
 
 // Helper functions for interpretative labels
 const getPhiLabel = (phi) => {
@@ -32,7 +33,7 @@ const getConvictionLabel = (conviction) => {
 };
 
 export default function Strategy() {
-    const { data, refreshTelemetry } = useTelemetry();
+    const { data, refreshTelemetry, error, loading } = useTelemetry();
 
     // Defensive destructuring
     const strategy = data?.strategy;
@@ -42,7 +43,34 @@ export default function Strategy() {
         refreshTelemetry();
     }, []);
 
-    if (!strategy) return null;
+    if (error) {
+        return (
+            <div className="p-4 rounded-md bg-statusBad/10 border border-statusBad/20 text-statusBad flex items-center gap-3">
+                <AlertCircle size={20} />
+                <div className="flex flex-col">
+                    <span className="font-bold text-sm">Error Fetching Strategy Data</span>
+                    <span className="text-xs font-mono opacity-80">{error}</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (loading && !strategy) {
+        return (
+            <div className="flex items-center justify-center h-64 text-textMuted gap-2">
+                <Loader className="animate-spin" size={20} />
+                <span className="font-mono text-sm">SYNCING STRATEGY STATE...</span>
+            </div>
+        );
+    }
+
+    if (!strategy) {
+        return (
+            <div className="p-8 text-center border border-dashed border-border rounded-lg text-textMuted">
+                No active strategy state available.
+            </div>
+        );
+    }
 
     const {
         regime,
@@ -53,6 +81,9 @@ export default function Strategy() {
         filters,
         last_decision
     } = strategy;
+
+    const activeFilters = Object.entries(filters ?? {});
+    const hasActiveFilters = activeFilters.length > 0;
 
     return (
         <div className="flex flex-col gap-4">
@@ -124,20 +155,26 @@ export default function Strategy() {
                     </h3>
 
                     <div className="flex flex-col gap-2">
-                        {Object.entries(filters ?? {}).map(([key, active]) => (
-                            <div
-                                key={key}
-                                className="flex justify-between items-center py-2 border-b border-border last:border-0"
-                            >
-                                <span className="font-mono text-[13px] uppercase">
-                                    {key}
-                                </span>
+                        {hasActiveFilters ? (
+                            activeFilters.map(([key, active]) => (
+                                <div
+                                    key={key}
+                                    className="flex justify-between items-center py-2 border-b border-border last:border-0"
+                                >
+                                    <span className="font-mono text-[13px] uppercase">
+                                        {key}
+                                    </span>
 
-                                <span className={`text-xs font-semibold ${active ? 'text-statusGood' : 'text-textMuted'}`}>
-                                    {active ? 'ACTIVE' : 'OFF'}
-                                </span>
+                                    <span className={`text-xs font-semibold ${active ? 'text-statusGood' : 'text-textMuted'}`}>
+                                        {active ? 'ACTIVE' : 'OFF'}
+                                    </span>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-sm text-textMuted italic py-2">
+                                No active risk filters.
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
 
