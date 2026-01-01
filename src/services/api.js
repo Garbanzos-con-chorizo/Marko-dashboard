@@ -162,8 +162,9 @@ async function fetchTelemetry(strategyId = null) {
     return transformTelemetry(generateTelemetry(strategyId || 'legacy'));
   }
 
-  // Route to V2 if ID is provided, else V1
-  const url = strategyId
+  // Route to V2 if ID is provided AND valid, else V1 (Legacy_Primary maps to V1)
+  const isLegacy = !strategyId || strategyId === 'Legacy_Primary';
+  const url = !isLegacy
     ? `${API_BASE_URL}/api/v2/strategies/${strategyId}/telemetry`
     : `${API_BASE_URL}/api/v1/telemetry`;
 
@@ -173,6 +174,10 @@ async function fetchTelemetry(strategyId = null) {
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
     const raw = await response.json();
+    // Inject instance ID if missing (for legacy)
+    if (isLegacy && !raw.instance_id) {
+      raw.instance_id = 'Legacy_Primary';
+    }
     return transformTelemetry(raw);
   } catch (error) {
     console.error(`Fetch failed for ${url}:`, error);
@@ -240,8 +245,9 @@ async function fetchChartData(strategyId = null) {
     return generateChartData(strategyId || 'legacy');
   }
 
-  // Route to V2 if ID is provided, else V1
-  const url = strategyId
+  // Route to V2 if ID is provided AND valid, else V1 (Legacy_Primary maps to V1)
+  const isLegacy = !strategyId || strategyId === 'Legacy_Primary';
+  const url = !isLegacy
     ? `${API_BASE_URL}/api/v2/strategies/${strategyId}/chart`
     : `${API_BASE_URL}/api/chart`;
 
