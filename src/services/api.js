@@ -98,22 +98,23 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // Transform backend response to frontend format
 function transformTelemetry(raw) {
-  // Detect if raw is the full snapshot OR just the flattened StrategyState (V2 ambiguous case)
-  // If 'markov_state' is at root, treat as flat StrategyState
+  // V2 API returns instance-specific telemetry with these possible structures:
+  // 1. Full snapshot: { engine: {...}, strategy: {...}, portfolio: {...}, events: [...] }
+  // 2. Flat StrategyState: { markov_state, phi, volatility, ... } (just the logical fields)
+
   let strategyData = raw.strategy;
   let engineData = raw.engine;
   let portfolioData = raw.portfolio;
 
-  if (!strategyData && raw.markov_state) {
-    // V2 Flat Response Detected
+  // Detect V2 flat response (just strategy state fields at root level)
+  if (!strategyData && (raw.markov_state !== undefined || raw.phi !== undefined)) {
     strategyData = raw;
-    // Engine/Portfolio are missing in flat response, so we default them or leave them empty.
-    // This allows the Strategy Detail view to work partially even if full snapshot isn't sent.
-    engineData = { status: 'UNKNOWN' }; // Fallback
-    portfolioData = { total_equity: 0, positions: [] }; // Fallback
+    // For flat responses, engine/portfolio might be missing - use sensible defaults
+    engineData = engineData || { status: 'RUNNING' };
+    portfolioData = portfolioData || { total_equity: 0, positions: [] };
   }
 
-  // Convert active_filters array to object format
+  // Convert active_filters from array to object for easier UI rendering
   const filtersObj = {};
   if (strategyData?.active_filters && Array.isArray(strategyData.active_filters)) {
     strategyData.active_filters.forEach(filter => {
@@ -132,16 +133,19 @@ function transformTelemetry(raw) {
       unrealizedPnL: portfolioData?.positions?.reduce((sum, pos) => sum + (pos.unrealized_pnl || 0), 0) || 0,
       openPositionsCount: portfolioData?.positions?.length || 0,
       lastAction: strategyData?.last_decision || 'WAIT',
-      instanceId: raw.instance_id // Capture V2 instance ID
+      instanceId: raw.instance_id || raw.id // Capture V2 instance ID
     },
     strategy: {
-      name: strategyData?.name || 'Unknown Strategy',
-      regime: strategyData?.markov_state || strategyData?.regime || 'UNKNOWN', // Prioritize markov_state
+      name: strategyData?.name || raw.id || 'Unknown Strategy',
+      // V2 Multi-Strategy: These fields are now instance-specific
+      markov_state: strategyData?.markov_state || strategyData?.regime || 'UNKNOWN',
+      regime: strategyData?.markov_state || strategyData?.regime || 'UNKNOWN', // Keep both for compatibility
       phi: strategyData?.phi ?? null,
       volatility: strategyData?.volatility ?? null,
-      conviction_score: strategyData?.conviction_score ?? 0,
-      risk_multiplier: strategyData?.risk_multiplier ?? 1,
-      filters: filtersObj,
+      conviction_score: strategyData?.conviction_score ?? null,
+      risk_multiplier: strategyData?.risk_multiplier ?? null,
+      active_filters: strategyData?.active_filters || [],
+      filters: filtersObj, // Object format for UI
       last_decision: strategyData?.last_decision || 'No recent decision'
     },
     positions: (portfolioData?.positions || []).map(pos => ({

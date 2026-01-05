@@ -1,11 +1,16 @@
 import React, { useEffect } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
+import { useStrategy } from '../context/StrategyContext';
 import StatCard from '../components/StatCard';
 import PriceChart from '../components/PriceChart';
 
 export default function Overview() {
     const { data, chartData, loading, refreshTelemetry, refreshChart } = useTelemetry();
+    const { strategies, selectedStrategyId } = useStrategy();
     const { status, strategy } = data;
+
+    // Get the current strategy info
+    const currentStrategy = strategies.find(s => s.id === selectedStrategyId);
 
     // Refresh data when page loads
     useEffect(() => {
@@ -25,7 +30,14 @@ export default function Overview() {
     return (
         <div className="flex flex-col gap-4">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">System Overview</h2>
+                <div>
+                    <h2 className="text-xl font-semibold">System Overview</h2>
+                    {currentStrategy && (
+                        <p className="text-sm text-textMuted font-mono mt-1">
+                            Viewing: <span className="text-primary">{currentStrategy.id}</span> • {currentStrategy.symbol} • {currentStrategy.timeframe}
+                        </p>
+                    )}
+                </div>
                 <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusClasses}`}>
                     {status.status}
                 </div>

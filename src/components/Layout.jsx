@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 import { useStrategy } from '../context/StrategyContext';
 import { NavLink } from 'react-router-dom';
+import StrategySelector from './StrategySelector';
 import {
     LayoutDashboard,
     Cpu,
@@ -87,25 +88,12 @@ export default function Layout({ children }) {
 
                 {/* Strategy Selector (Only if expanded and we have strategies) */}
                 {!isCollapsed && strategies.length > 0 && (
-                    <div className="px-4 py-3 border-b border-border bg-surfaceHighlight/10">
-                        <label className="text-[10px] text-textMuted uppercase font-bold mb-1 block">Active Strategy</label>
-                        <select
-                            value={selectedStrategyId || ''}
-                            onChange={(e) => selectStrategy(e.target.value)}
-                            className="w-full bg-background border border-border rounded text-xs text-text px-2 py-1.5 focus:border-primary outline-none cursor-pointer"
-                        >
-                            {strategies.map(s => (
-                                <option key={s.id} value={s.id}>
-                                    {s.id}
-                                </option>
-                            ))}
-                        </select>
-                        <div className="flex items-center justify-between mt-1 text-[10px] text-textMuted">
-                            <span>{strategies.find(s => s.id === selectedStrategyId)?.symbol || '--'}</span>
-                            <span className={strategies.find(s => s.id === selectedStrategyId)?.status === 'RUNNING' ? 'text-statusGood' : 'text-textMuted'}>
-                                {strategies.find(s => s.id === selectedStrategyId)?.status || 'UNKNOWN'}
-                            </span>
-                        </div>
+                    <div className="px-4 py-3 border-b border-border">
+                        <StrategySelector
+                            strategies={strategies}
+                            selectedStrategyId={selectedStrategyId}
+                            onSelect={selectStrategy}
+                        />
                     </div>
                 )}
 

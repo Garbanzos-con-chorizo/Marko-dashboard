@@ -1,9 +1,14 @@
 import React, { useEffect } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
+import { useStrategy } from '../context/StrategyContext';
 
 export default function Events() {
     const { data, refreshTelemetry } = useTelemetry();
+    const { strategies, selectedStrategyId } = useStrategy();
     const { events } = data;
+
+    // Get the current strategy info
+    const currentStrategy = strategies.find(s => s.id === selectedStrategyId);
 
     // Refresh data when page loads
     useEffect(() => {
@@ -14,7 +19,14 @@ export default function Events() {
 
     return (
         <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-semibold mb-4">System Logs</h2>
+            <div className="mb-4">
+                <h2 className="text-xl font-semibold">System Logs</h2>
+                {currentStrategy && (
+                    <p className="text-sm text-textMuted font-mono mt-1">
+                        Instance: <span className="text-primary">{currentStrategy.id}</span> • {currentStrategy.symbol}
+                    </p>
+                )}
+            </div>
 
             <div className="card p-0">
                 {events.length === 0 ? (

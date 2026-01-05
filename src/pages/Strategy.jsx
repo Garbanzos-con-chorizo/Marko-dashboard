@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
+import { useStrategy } from '../context/StrategyContext';
 import StatCard from '../components/StatCard';
 import { AlertCircle, Loader } from 'lucide-react';
 
@@ -34,9 +35,13 @@ const getConvictionLabel = (conviction) => {
 
 export default function Strategy() {
     const { data, refreshTelemetry, error, loading } = useTelemetry();
+    const { strategies, selectedStrategyId } = useStrategy();
 
     // Defensive destructuring
     const strategy = data?.strategy;
+
+    // Get the current strategy info
+    const currentStrategy = strategies.find(s => s.id === selectedStrategyId);
 
     // Refresh data when page loads
     useEffect(() => {
@@ -74,6 +79,7 @@ export default function Strategy() {
 
     const {
         regime,
+        markov_state,
         phi,
         volatility,
         risk_multiplier,
@@ -87,9 +93,19 @@ export default function Strategy() {
 
     return (
         <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-semibold mb-4">
-                Strategy State
-            </h2>
+            <div className="mb-4">
+                <h2 className="text-xl font-semibold">
+                    Strategy State
+                </h2>
+                {currentStrategy && (
+                    <p className="text-sm text-textMuted font-mono mt-1">
+                        Instance: <span className="text-primary">{currentStrategy.id}</span> • {currentStrategy.symbol} • {currentStrategy.timeframe}
+                    </p>
+                )}
+                <p className="text-xs text-textMuted mt-1">
+                    These logical fields are specific to this strategy instance's isolated memory and parameters.
+                </p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 <StatCard
