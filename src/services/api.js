@@ -333,9 +333,26 @@ async function controlStrategy(id, action) {
   }
 }
 
+async function wakeUp() {
+  if (IS_MOCK) return true;
+  try {
+    console.log("Creating wake-up signal...");
+    // Use no-cors to blindly fire a packet to wake up server
+    // (GET / usually returns 200 or 404, both wake it up)
+    await fetch(`${API_BASE_URL}/`, { method: 'GET', mode: 'no-cors' });
+    return true;
+  } catch (e) {
+    // Network error probably means it's down or DNS issue, 
+    // but the attempt itself might have triggered the wake up.
+    console.warn("Wake-up signal attempt:", e);
+    return false;
+  }
+}
+
 export const api = {
   getTelemetry: fetchTelemetry,
   getChartData: fetchChartData,
   getStrategies: fetchStrategies,
-  controlStrategy: controlStrategy
+  controlStrategy: controlStrategy,
+  wakeUp: wakeUp
 };
