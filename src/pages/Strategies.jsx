@@ -1,9 +1,11 @@
 import React from 'react';
 import { useStrategy } from '../context/StrategyContext';
+import { useTelemetry } from '../context/TelemetryContext';
 import { Play, Square, Pause, Activity, TrendingUp, TrendingDown, CheckCircle } from 'lucide-react';
 
 export default function Strategies() {
     const { strategies, selectedStrategyId, selectStrategy, controlStrategy, loading } = useStrategy();
+    const { data: telemetryData } = useTelemetry();
 
     const handleControl = async (e, id, action) => {
         e.stopPropagation(); // Prevent row selection if clicked
@@ -28,10 +30,25 @@ export default function Strategies() {
             </header>
 
             <div className="grid gap-3">
-                {strategies.map((strategy) => {
-                    const isSelected = strategy.id === selectedStrategyId;
+                {strategies.map((s) => {
+                    // Sync with live telemetry if this is the selected strategy
+                    const isSelected = s.id === selectedStrategyId;
+                    const strategy = isSelected && telemetryData?.status
+                        ? {
+                            ...s,
+                            status: telemetryData.status.status,
+                            active_pnl: telemetryData.status.unrealizedPnL
+                        }
+                        : s;
+
+                    // Robust status checks
+                    const isStopped = strategy.status === 'STOPPED' || !strategy.status;
+                    const isStarting = strategy.status === 'STARTING';
                     const isRunning = strategy.status === 'RUNNING';
-                    const isStopped = strategy.status === 'STOPPED';
+                    const isPaused = strategy.status === 'PAUSED';
+
+                    // Any state that isn't STOPPED should allow STOP/PAUSE controls
+                    const isActive = isRunning || isStarting || isPaused;
 
                     return (
                         <div
@@ -74,12 +91,14 @@ export default function Strategies() {
                                         flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono tracking-wider border
                                         ${isRunning
                                             ? 'bg-statusGood/10 text-statusGood border-statusGood/20'
-                                            : isStopped
-                                                ? 'bg-statusBad/10 text-statusBad border-statusBad/20'
-                                                : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                                            : isStarting
+                                                ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                                : isStopped
+                                                    ? 'bg-statusBad/10 text-statusBad border-statusBad/20'
+                                                    : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                                         }
                                     `}>
-                                        <div className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-statusGood animate-pulse' : isStopped ? 'bg-statusBad' : 'bg-yellow-500'}`}></div>
+                                        <div className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-statusGood animate-pulse' : isStarting ? 'bg-amber-500 animate-pulse' : isStopped ? 'bg-statusBad' : 'bg-yellow-500'}`}></div>
                                         {strategy.status}
                                     </div>
                                 </div>
@@ -89,21 +108,23 @@ export default function Strategies() {
                                     <span className="text-[10px] text-textMuted uppercase tracking-wider mb-0.5">Active PnL</span>
                                     <div className={`flex items-center gap-1.5 text-sm font-bold font-mono ${strategy.active_pnl >= 0 ? 'text-statusGood' : 'text-statusBad'}`}>
                                         {strategy.active_pnl >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                                        {strategy.active_pnl >= 0 ? '+' : ''}{strategy.active_pnl.toFixed(2)}
+                                        {strategy.active_pnl >= 0 ? '+' : ''}{(strategy.active_pnl || 0).toFixed(2)}
                                     </div>
                                 </div>
 
                                 {/* Controls */}
                                 <div className="flex items-center gap-2 pl-4 border-l border-border/50">
-                                    {isRunning ? (
+                                    {isActive ? (
                                         <>
-                                            <button
-                                                onClick={(e) => handleControl(e, strategy.id, 'pause')}
-                                                className="p-2 rounded hover:bg-yellow-500/20 hover:text-yellow-500 text-textMuted transition-colors"
-                                                title="Pause Strategy"
-                                            >
-                                                <Pause size={16} />
-                                            </button>
+                                            {!isStarting && (
+                                                <button
+                                                    onClick={(e) => handleControl(e, strategy.id, 'pause')}
+                                                    className="p-2 rounded hover:bg-yellow-500/20 hover:text-yellow-500 text-textMuted transition-colors"
+                                                    title="Pause Strategy"
+                                                >
+                                                    <Pause size={16} />
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={(e) => handleControl(e, strategy.id, 'stop')}
                                                 className="p-2 rounded hover:bg-statusBad/20 hover:text-statusBad text-textMuted transition-colors"
