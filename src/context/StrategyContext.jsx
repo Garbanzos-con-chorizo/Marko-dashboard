@@ -68,14 +68,37 @@ export const StrategyProvider = ({ children }) => {
     };
 
     const handleControlStrategy = async (id, action) => {
+        // 1. Optimistic Update: Immediately set the status in UI to feel responsive
+        const previousStrategies = [...strategies];
+        setStrategies(current =>
+            current.map(s => {
+                if (s.id === id) {
+                    let newStatus = s.status;
+                    if (action === 'start') newStatus = 'RUNNING';
+                    if (action === 'stop') newStatus = 'STOPPED';
+                    if (action === 'pause') newStatus = 'PAUSED'; // Assuming 'PAUSED' is a valid state or maps to STOPPED
+                    return { ...s, status: newStatus };
+                }
+                return s;
+            })
+        );
+
         try {
+            console.log(`[StrategyContext] Sending ${action} command for ${id}...`);
             await api.controlStrategy(id, action);
-            // Optimistic update or wait for next poll?
-            // User requested: "UI may optimistically update OR wait for next poll confirmation"
-            // Let's force a refresh immediately to make it feel responsive
-            fetchStrategies();
+
+            // 2. Fetch latest truth from server to confirm
+            // We wait a tiny bit to allow the backend to propagate the change
+            setTimeout(() => {
+                fetchStrategies();
+            }, 200);
+
             return { success: true };
         } catch (err) {
+            console.error(`[StrategyContext] Control failed:`, err);
+
+            // 3. Rollback on failure
+            setStrategies(previousStrategies);
             return { success: false, error: err.message };
         }
     };
