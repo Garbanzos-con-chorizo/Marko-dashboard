@@ -200,7 +200,7 @@ async function fetchTelemetry(strategyId = null) {
 }
 
 // Mock chart data generator matching /api/chart (and V2) contract
-const generateChartData = (strategyId = 'legacy') => {
+const generateChartData = (strategyId = 'legacy', limit = 100) => {
   const now = Date.now();
   const bars = [];
   const entries = [];
@@ -212,8 +212,8 @@ const generateChartData = (strategyId = 'legacy') => {
   let basePrice = isEth ? 3500 : (isSol ? 145 : 67000);
   const symbol = isEth ? 'ETH/USD' : (isSol ? 'SOL/USD' : 'BTC/USD');
 
-  // Generate 100 bars (candlesticks) with realistic price movement
-  for (let i = 99; i >= 0; i--) {
+  // Generate N bars (candlesticks) with realistic price movement
+  for (let i = limit - 1; i >= 0; i--) {
     const ts = now - (i * 3600000); // 1-hour bars
     const volatility = basePrice * 0.005; // 0.5% volatility
     const open = basePrice;
@@ -226,13 +226,13 @@ const generateChartData = (strategyId = 'legacy') => {
     basePrice = close;
 
     // Add some random entries
-    if (i === 70) {
+    if (i === 70 && limit >= 70) {
       entries.push({ ts, price: open, side: 'LONG', size: 0.5 });
     }
-    if (i === 40) {
+    if (i === 40 && limit >= 40) {
       exits.push({ ts, price: close });
     }
-    if (i === 30) {
+    if (i === 30 && limit >= 30) {
       entries.push({ ts, price: open, side: 'SHORT', size: 0.3 });
     }
   }
@@ -253,17 +253,20 @@ const generateChartData = (strategyId = 'legacy') => {
   };
 };
 
-async function fetchChartData(strategyId = null) {
+async function fetchChartData(strategyId = null, limit = 100) {
   if (IS_MOCK) {
     await sleep(MOCK_DELAY);
-    return generateChartData(strategyId || 'legacy');
+    return generateChartData(strategyId || 'legacy', limit);
   }
 
   // Route to V2 if ID is provided AND valid, else V1 (Legacy_Primary maps to V1)
   const isLegacy = !strategyId || strategyId === 'Legacy_Primary';
-  const url = !isLegacy
+  let url = !isLegacy
     ? `${API_BASE_URL}/api/v2/strategies/${strategyId}/chart`
     : `${API_BASE_URL}/api/chart`;
+
+  // Append limit query param
+  url += `?limit=${limit}`;
 
   try {
     const response = await fetch(url);

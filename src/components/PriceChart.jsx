@@ -1,7 +1,9 @@
 import React, { useRef, useEffect } from 'react';
+import { useTelemetry } from '../context/TelemetryContext';
 
 export default function PriceChart({ chartData }) {
     const canvasRef = useRef(null);
+    const { barsLimit, setBarsLimit } = useTelemetry();
 
     useEffect(() => {
         if (!chartData || !Array.isArray(chartData.bars) || chartData.bars.length === 0) {
@@ -146,7 +148,7 @@ export default function PriceChart({ chartData }) {
         bars.forEach((bar, index) => {
             const x = chartPadding.left + index * barWidth;
             const isGreen = bar.close >= bar.open;
-            const candlePadding = barWidth * 0.15;
+            const candlePadding = Math.max(1, barWidth * 0.15); // Ensure at least 1px padding if possible, or dynamic
 
             ctx.strokeStyle = isGreen ? '#10b981' : '#ef4444';
             ctx.fillStyle = isGreen ? '#10b981' : '#ef4444';
@@ -166,7 +168,12 @@ export default function PriceChart({ chartData }) {
             // Body
             const bodyHeight = Math.max(1, Math.abs(closeY - openY));
             const bodyY = Math.min(openY, closeY);
-            ctx.fillRect(x + candlePadding, bodyY, barWidth - candlePadding * 2, bodyHeight);
+
+            // Adjust body width/padding for large datasets
+            let drawWidth = barWidth - candlePadding * 2;
+            if (drawWidth < 1) drawWidth = 1; // Minimum visibility
+
+            ctx.fillRect(x + candlePadding, bodyY, drawWidth, bodyHeight);
         });
 
         // 6. Draw Current Position Line
@@ -238,8 +245,27 @@ export default function PriceChart({ chartData }) {
                         {chartData.timeframe || '1H'}
                     </span>
                 </div>
-                <div className="text-[10px] text-textMuted font-mono uppercase">
-                    Live Stream · {chartData.bars.length} Bars
+
+                <div className="flex items-center gap-3">
+                    <div className="flex bg-surfaceHighlight rounded overflow-hidden border border-border">
+                        <button
+                            onClick={() => setBarsLimit(100)}
+                            className={`px-2 py-1 text-[10px] font-mono transition-colors ${barsLimit === 100 ? 'bg-primary text-background font-bold' : 'text-textMuted hover:text-text'}`}
+                        >
+                            100
+                        </button>
+                        <div className="w-[1px] bg-border"></div>
+                        <button
+                            onClick={() => setBarsLimit(500)}
+                            className={`px-2 py-1 text-[10px] font-mono transition-colors ${barsLimit === 500 ? 'bg-primary text-background font-bold' : 'text-textMuted hover:text-text'}`}
+                        >
+                            500
+                        </button>
+                    </div>
+
+                    <div className="text-[10px] text-textMuted font-mono uppercase">
+                        {chartData.bars.length} Bars
+                    </div>
                 </div>
             </div>
 

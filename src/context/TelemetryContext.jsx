@@ -28,6 +28,9 @@ export const TelemetryProvider = ({ children }) => {
     const [chartError, setChartError] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
 
+    // Default to 100 bars
+    const [barsLimit, setBarsLimit] = useState(100);
+
     // Improve polling consistency with a ref to track mounting
     const isMounted = useRef(true);
 
@@ -36,7 +39,7 @@ export const TelemetryProvider = ({ children }) => {
         try {
             // Always use the freshest ID from the Ref
             const currentId = strategyIdRef.current;
-            console.log('[TelemetryContext] Polling Telemetry for ID:', currentId);
+            // console.log('[TelemetryContext] Polling Telemetry for ID:', currentId);
 
             // Pass currentId to api
             const telemetryData = await api.getTelemetry(currentId);
@@ -76,8 +79,8 @@ export const TelemetryProvider = ({ children }) => {
             // Always use the freshest ID from the Ref
             const currentId = strategyIdRef.current;
 
-            // Pass currentId to api
-            const data = await api.getChartData(currentId);
+            // Pass currentId and limit to api
+            const data = await api.getChartData(currentId, barsLimit);
             if (isMounted.current) {
                 setChartData(data);
                 setChartError(null);
@@ -90,15 +93,15 @@ export const TelemetryProvider = ({ children }) => {
         }
     };
 
-    // Effect to handle strategy changes and polling
+    // Effect to handle strategy changes, limit changes, and polling
     useEffect(() => {
         isMounted.current = true;
-        setLoading(true); // Show loading when switching strategies
+        setLoading(true); // Show loading when switching strategies or limits
 
         // Use a faster poll interval for telemetry (e.g., 5s) instead of 14m
         const pollInterval = 5000;
 
-        // Initial fetch when ID changes
+        // Initial fetch
         fetchTelemetryData();
         fetchChartDataManual();
 
@@ -111,7 +114,7 @@ export const TelemetryProvider = ({ children }) => {
         return () => {
             clearInterval(intervalId);
         };
-    }, [selectedStrategyId]);
+    }, [selectedStrategyId, barsLimit]);
 
     // Proper cleanup on unmount
     useEffect(() => {
@@ -128,6 +131,8 @@ export const TelemetryProvider = ({ children }) => {
         lastUpdated,
         refreshTelemetry: fetchTelemetryData,
         refreshChart: fetchChartDataManual,
+        barsLimit,
+        setBarsLimit
     };
 
     return (
