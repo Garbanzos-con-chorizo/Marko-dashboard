@@ -33,12 +33,15 @@ export default function Strategies() {
                 {strategies.map((s) => {
                     const isSelected = s.id === selectedStrategyId;
 
-                    // High-fidelity PnL synchronization for selected strategy
-                    // We DO NOT sync 'status' here anymore because it overrides optimistic updates 
-                    // from the toggle buttons before the backend has actually finished the state change.
+                    // High-fidelity synchronization for selected strategy
+                    // If the live telemetry shows warmup is over, we automatically transition 
+                    // the status in the UI to 'RUNNING'.
                     const strategy = isSelected && telemetryData?.status
                         ? {
                             ...s,
+                            status: (s.status?.toUpperCase() === 'STARTING' && !telemetryData.status.is_warming_up)
+                                ? 'RUNNING'
+                                : (telemetryData.status.status || s.status),
                             active_pnl: telemetryData.status.unrealizedPnL
                         }
                         : s;
