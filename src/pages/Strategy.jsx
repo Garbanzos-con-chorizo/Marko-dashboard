@@ -79,7 +79,6 @@ export default function Strategy() {
 
     const {
         regime,
-        markov_state,
         phi,
         volatility,
         risk_multiplier,

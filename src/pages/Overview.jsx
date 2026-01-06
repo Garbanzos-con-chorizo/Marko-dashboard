@@ -7,7 +7,7 @@ import PriceChart from '../components/PriceChart';
 export default function Overview() {
     const { data, chartData, loading, refreshTelemetry, refreshChart } = useTelemetry();
     const { strategies, selectedStrategyId } = useStrategy();
-    const { status, strategy } = data;
+    const { status } = data;
 
     // Get the current strategy info
     const currentStrategy = strategies.find(s => s.id === selectedStrategyId);
@@ -23,7 +23,10 @@ export default function Overview() {
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
-    const statusClasses = status.status === 'RUNNING'
+    const normalizedStatus = (status.status || '').toUpperCase();
+    const isRunning = normalizedStatus === 'RUNNING' || normalizedStatus === 'ACTIVE' || normalizedStatus === 'LIVE';
+
+    const statusClasses = isRunning
         ? 'bg-green-400/10 text-statusGood border-current'
         : 'bg-red-400/10 text-statusBad border-current';
 

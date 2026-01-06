@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { api } from '../services/api';
 import { useStrategy } from './StrategyContext';

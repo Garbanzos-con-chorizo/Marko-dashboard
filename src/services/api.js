@@ -122,10 +122,20 @@ function transformTelemetry(raw) {
     });
   }
 
+  // Normalize status logic:
+  // If the engine says "STARTING" but is_warming_up is false, it effectively means "RUNNING".
+  // This handles cases where the backend status update might lag or persist "STARTING".
+  let engineStatus = (engineData?.status || 'UNKNOWN').toUpperCase();
+  const isWarmingUp = engineData?.is_warming_up || false;
+
+  if (engineStatus === 'STARTING' && !isWarmingUp) {
+    engineStatus = 'RUNNING';
+  }
+
   return {
     status: {
-      status: engineData?.status || 'UNKNOWN',
-      is_warming_up: engineData?.is_warming_up || false,
+      status: engineStatus,
+      is_warming_up: isWarmingUp,
       warmup_progress: engineData?.warmup_progress || 0,
       warmup_remaining_est: engineData?.warmup_remaining_seconds || 0,
       heartbeat: engineData?.last_heartbeat,

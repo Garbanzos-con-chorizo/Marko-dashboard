@@ -14,6 +14,7 @@ import {
     Globe
 } from 'lucide-react';
 
+// eslint-disable-next-line no-unused-vars
 const SidebarLink = ({ to, label, icon: Icon, isCollapsed }) => (
     <NavLink
         to={to}
