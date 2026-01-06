@@ -41,9 +41,11 @@ export default function StrategySelector({ strategies, selectedStrategyId, onSel
                 className="w-full bg-background border border-border rounded-md px-3 py-2.5 flex items-center justify-between gap-2 hover:border-primary/50 transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-primary/30"
             >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div className={`w-2 h-2 rounded-full shrink-0 ${selectedStrategy?.status === 'RUNNING'
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${(selectedStrategy?.status?.toUpperCase() === 'RUNNING' || selectedStrategy?.status?.toUpperCase() === 'ACTIVE')
                             ? 'bg-statusGood animate-pulse'
-                            : 'bg-statusBad'
+                            : selectedStrategy?.status?.toUpperCase() === 'STARTING'
+                                ? 'bg-amber-500 animate-pulse'
+                                : 'bg-statusBad'
                         }`} />
                     <span className="text-xs font-mono text-text truncate">
                         {selectedStrategy?.id || 'Select Strategy'}
@@ -70,7 +72,11 @@ export default function StrategySelector({ strategies, selectedStrategyId, onSel
                     <div className="max-h-[280px] overflow-y-auto">
                         {strategies.map((strategy) => {
                             const isSelected = strategy.id === selectedStrategyId;
-                            const isRunning = strategy.status === 'RUNNING';
+
+                            // Normalizing status for robust matching
+                            const rawStatus = (strategy.status || '').toUpperCase();
+                            const isRunning = rawStatus === 'RUNNING' || rawStatus === 'ACTIVE';
+                            const isStarting = rawStatus === 'STARTING';
 
                             return (
                                 <button
@@ -86,7 +92,7 @@ export default function StrategySelector({ strategies, selectedStrategyId, onSel
                                     `}
                                 >
                                     {/* Status Indicator */}
-                                    <div className={`w-2 h-2 rounded-full shrink-0 ${isRunning ? 'bg-statusGood' : 'bg-statusBad'
+                                    <div className={`w-2 h-2 rounded-full shrink-0 ${isRunning ? 'bg-statusGood' : isStarting ? 'bg-amber-500' : 'bg-statusBad'
                                         }`} />
 
                                     {/* Strategy Info */}
@@ -104,7 +110,7 @@ export default function StrategySelector({ strategies, selectedStrategyId, onSel
                                             <span className="w-1 h-1 rounded-full bg-border" />
                                             <span>{strategy.timeframe}</span>
                                             <span className="w-1 h-1 rounded-full bg-border" />
-                                            <span className={isRunning ? 'text-statusGood' : 'text-statusBad'}>
+                                            <span className={isRunning ? 'text-statusGood' : isStarting ? 'text-amber-500' : 'text-statusBad'}>
                                                 {strategy.status}
                                             </span>
                                         </div>
@@ -112,8 +118,8 @@ export default function StrategySelector({ strategies, selectedStrategyId, onSel
 
                                     {/* PnL Badge */}
                                     <div className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${strategy.active_pnl >= 0
-                                            ? 'text-statusGood bg-statusGood/10'
-                                            : 'text-statusBad bg-statusBad/10'
+                                        ? 'text-statusGood bg-statusGood/10'
+                                        : 'text-statusBad bg-statusBad/10'
                                         }`}>
                                         {strategy.active_pnl >= 0 ? '+' : ''}{strategy.active_pnl.toFixed(0)}
                                     </div>

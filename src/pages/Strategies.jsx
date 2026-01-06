@@ -31,23 +31,28 @@ export default function Strategies() {
 
             <div className="grid gap-3">
                 {strategies.map((s) => {
-                    // Sync with live telemetry if this is the selected strategy
                     const isSelected = s.id === selectedStrategyId;
+
+                    // High-fidelity PnL synchronization for selected strategy
+                    // We DO NOT sync 'status' here anymore because it overrides optimistic updates 
+                    // from the toggle buttons before the backend has actually finished the state change.
                     const strategy = isSelected && telemetryData?.status
                         ? {
                             ...s,
-                            status: telemetryData.status.status,
                             active_pnl: telemetryData.status.unrealizedPnL
                         }
                         : s;
 
-                    // Robust status checks
-                    const isStopped = strategy.status === 'STOPPED' || !strategy.status;
-                    const isStarting = strategy.status === 'STARTING';
-                    const isRunning = strategy.status === 'RUNNING';
-                    const isPaused = strategy.status === 'PAUSED';
+                    // Normalizing status for robust matching
+                    const rawStatus = (strategy.status || '').toUpperCase();
 
-                    // Any state that isn't STOPPED should allow STOP/PAUSE controls
+                    // Robust status checks
+                    const isStopped = rawStatus === 'STOPPED' || rawStatus === 'OFF' || !rawStatus;
+                    const isStarting = rawStatus === 'STARTING' || rawStatus === 'WARMUP';
+                    const isRunning = rawStatus === 'RUNNING' || rawStatus === 'ACTIVE' || rawStatus === 'LIVE';
+                    const isPaused = rawStatus === 'PAUSED';
+
+                    // Grouping active states for control logic
                     const isActive = isRunning || isStarting || isPaused;
 
                     return (
