@@ -8,6 +8,13 @@ export const TelemetryProvider = ({ children }) => {
     // Access strategy context to get current selection
     const { selectedStrategyId } = useStrategy();
 
+    // Keep a ref to the current ID so the poller always sees the fresh value
+    // (even if the interval closure is somehow stale)
+    const strategyIdRef = useRef(selectedStrategyId);
+    useEffect(() => {
+        strategyIdRef.current = selectedStrategyId;
+    }, [selectedStrategyId]);
+
     const [telemetry, setTelemetry] = useState({
         status: null,
         strategy: null,
@@ -26,8 +33,12 @@ export const TelemetryProvider = ({ children }) => {
     // Fetch functions exposed for manual refresh
     const fetchTelemetryData = async () => {
         try {
-            // Pass selectedStrategyId to api
-            const telemetryData = await api.getTelemetry(selectedStrategyId);
+            // Always use the freshest ID from the Ref
+            const currentId = strategyIdRef.current;
+            console.log('[TelemetryContext] Polling Telemetry for ID:', currentId);
+
+            // Pass currentId to api
+            const telemetryData = await api.getTelemetry(currentId);
 
             // Check warmup state
             if (telemetryData.status?.is_warming_up) {
@@ -61,8 +72,11 @@ export const TelemetryProvider = ({ children }) => {
 
     const fetchChartDataManual = async () => {
         try {
-            // Pass selectedStrategyId to api
-            const data = await api.getChartData(selectedStrategyId);
+            // Always use the freshest ID from the Ref
+            const currentId = strategyIdRef.current;
+
+            // Pass currentId to api
+            const data = await api.getChartData(currentId);
             if (isMounted.current) {
                 setChartData(data);
                 setChartError(null);
@@ -95,10 +109,6 @@ export const TelemetryProvider = ({ children }) => {
 
         return () => {
             clearInterval(intervalId);
-            // We don't set isMounted.current = false here because 
-            // the component might just be re-running the effect due to ID change, not unmounting.
-            // isMounted should be handled in a separate "mount" effect or just careful usage.
-            // Actually, cleanest is to trust the closure.
         };
     }, [selectedStrategyId]);
 
