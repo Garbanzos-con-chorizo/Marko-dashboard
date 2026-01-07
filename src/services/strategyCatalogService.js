@@ -71,7 +71,32 @@ async function getTelemetrySchema(id) {
     }
 }
 
+/**
+ * Fetch detailed documentation (README) for a specific strategy.
+ * GET /api/v2/catalog/strategies/{id}/readme
+ */
+async function getStrategyReadme(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v2/catalog/strategies/${id}/readme`, {
+            method: 'GET',
+            headers: { 'Accept': 'text/markdown, text/plain' }
+        });
+
+        if (response.status === 404) return null;
+        if (!response.ok) {
+            throw new Error(`Readme API Error for ${id}: ${response.status}`);
+        }
+
+        return await response.text();
+
+    } catch (error) {
+        console.warn(`Failed to fetch readme for ${id}:`, error);
+        return null;
+    }
+}
+
 export const strategyCatalogService = {
     getStrategyDefinitions,
-    getTelemetrySchema
+    getTelemetrySchema,
+    getStrategyReadme
 };

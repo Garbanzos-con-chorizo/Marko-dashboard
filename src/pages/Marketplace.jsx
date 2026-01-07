@@ -3,15 +3,17 @@ import { useStrategyCatalog } from '../context/StrategyCatalogContext';
 import { adminService } from '../services/adminService';
 import { Package, Download, GitBranch, Terminal, AlertCircle, Search, Info, Plus } from 'lucide-react';
 import ConfigureInstanceModal from '../components/ConfigureInstanceModal';
+import StrategyDetailsModal from '../components/StrategyDetailsModal';
 
 export default function Marketplace() {
     const { strategies, loading, error: catalogError } = useStrategyCatalog();
     const [installModalOpen, setInstallModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Config Modal State
-    const [selectedStrategy, setSelectedStrategy] = useState(null); // Strategy object for config modal
-    const [toastMessage, setToastMessage] = useState(null); // Global success toast
+    // UI State
+    const [selectedStrategy, setSelectedStrategy] = useState(null); // For config modal
+    const [detailsStrategy, setDetailsStrategy] = useState(null); // For details modal
+    const [toastMessage, setToastMessage] = useState(null);
 
     // Install State
     const [repoUrl, setRepoUrl] = useState('');
@@ -137,8 +139,10 @@ export default function Marketplace() {
                         </div>
 
                         <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                            {/* Placeholder for Details - could open another modal */}
-                            <button className="text-xs font-bold text-textSecondary hover:text-text transition-colors flex items-center gap-1">
+                            <button
+                                onClick={() => setDetailsStrategy(strategy)}
+                                className="text-xs font-bold text-textSecondary hover:text-text transition-colors flex items-center gap-1"
+                            >
                                 <Info size={12} /> DETAILS
                             </button>
 
@@ -254,6 +258,14 @@ export default function Marketplace() {
                     strategy={selectedStrategy}
                     onClose={() => setSelectedStrategy(null)}
                     onSuccess={handleInstanceCreated}
+                />
+            )}
+
+            {/* Strategy Details Modal */}
+            {detailsStrategy && (
+                <StrategyDetailsModal
+                    strategy={detailsStrategy}
+                    onClose={() => setDetailsStrategy(null)}
                 />
             )}
         </div>

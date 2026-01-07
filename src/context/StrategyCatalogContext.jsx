@@ -70,12 +70,23 @@ export const StrategyCatalogProvider = ({ children }) => {
         }
     }, [schemas]);
 
+    // Lazy load readme
+    const fetchReadme = useCallback(async (strategyId) => {
+        try {
+            return await strategyCatalogService.getStrategyReadme(strategyId);
+        } catch (err) {
+            console.warn(`[StrategyCatalog] Failed to load readme for ${strategyId}`, err);
+            return null;
+        }
+    }, []);
+
     const value = {
         strategies,
         schemas,
         loading,
         error,
-        fetchSchema
+        fetchSchema,
+        fetchReadme
     };
 
     return (
