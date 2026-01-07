@@ -15,8 +15,8 @@ export default function Marketplace() {
     const [installStatus, setInstallStatus] = useState(null); // { type: 'success' | 'error', message: '' }
 
     const filteredStrategies = strategies.filter(s =>
-        (s.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (s.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+        String(s.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(s.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleInstall = async (e) => {
@@ -158,8 +158,8 @@ export default function Marketplace() {
                         <div className="p-6 space-y-4">
                             {installStatus && (
                                 <div className={`p-3 rounded text-sm mb-4 border ${installStatus.type === 'success'
-                                        ? 'bg-statusGood/10 border-statusGood/20 text-statusGood'
-                                        : 'bg-statusBad/10 border-statusBad/20 text-statusBad'
+                                    ? 'bg-statusGood/10 border-statusGood/20 text-statusGood'
+                                    : 'bg-statusBad/10 border-statusBad/20 text-statusBad'
                                     }`}>
                                     <div className="flex items-start gap-2">
                                         <Info size={16} className="shrink-0 mt-0.5" />
