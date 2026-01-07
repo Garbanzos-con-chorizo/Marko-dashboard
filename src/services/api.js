@@ -315,10 +315,19 @@ async function fetchStrategies() {
     if (!response.ok) {
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
-    return await response.json();
+    const data = await response.json();
+
+    // Robust handling for various response formats
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.strategies)) return data.strategies;
+    if (data && Array.isArray(data.instances)) return data.instances;
+
+    console.warn("Unexpected strategies format:", data);
+    return [];
   } catch (error) {
     console.error(`Fetch failed for ${url}:`, error);
-    throw error;
+    // Don't throw, return empty so UI doesn't crash
+    return [];
   }
 }
 
