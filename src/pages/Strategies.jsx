@@ -85,6 +85,7 @@ export default function Strategies() {
                         : s;
 
                     const rawStatus = (strategy.status || '').toUpperCase();
+                    const isError = rawStatus === 'ERROR' || rawStatus === 'CRASHED';
                     const isStopped = rawStatus === 'STOPPED' || rawStatus === 'OFF' || !rawStatus;
                     const isStarting = rawStatus === 'STARTING' || rawStatus === 'WARMUP';
                     const isRunning = rawStatus === 'RUNNING' || rawStatus === 'ACTIVE' || rawStatus === 'LIVE';
@@ -134,13 +135,18 @@ export default function Strategies() {
                                         ? 'bg-statusGood/10 text-statusGood border-statusGood/20'
                                         : isStarting
                                             ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                            : isStopped
+                                            : isError
                                                 ? 'bg-statusBad/10 text-statusBad border-statusBad/20'
-                                                : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                                                : 'bg-textMuted/10 text-textMuted border-textMuted/20' // STOPPED / OFF
                                     }
                                 `}>
-                                    <div className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-statusGood animate-pulse' : isStarting ? 'bg-amber-500 animate-pulse' : isStopped ? 'bg-statusBad' : 'bg-yellow-500'}`}></div>
-                                    {strategy.status}
+                                    <div className={`w-1.5 h-1.5 rounded-full 
+                                        ${isRunning ? 'bg-statusGood animate-pulse'
+                                            : isStarting ? 'bg-amber-500 animate-pulse'
+                                                : isError ? 'bg-statusBad'
+                                                    : 'bg-textMuted' /* STOPPED */
+                                        }`}></div>
+                                    {strategy.status || 'STOPPED'}
                                 </div>
 
                                 {/* Active PnL */}

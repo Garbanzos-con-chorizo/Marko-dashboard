@@ -47,7 +47,7 @@ export default function Marketplace() {
     };
 
     const handleInstanceCreated = () => {
-        setToastMessage("Instance created successfully. Restart engine to activate.");
+        setToastMessage("Instance created. Initializing and warming up...");
         setTimeout(() => setToastMessage(null), 5000);
     };
 
