@@ -21,8 +21,18 @@ export const StrategyCatalogProvider = ({ children }) => {
                 const data = await strategyCatalogService.getStrategyDefinitions();
 
                 if (isMounted.current) {
-                    setStrategies(data || []);
-                    console.log(`[StrategyCatalog] Loaded ${data?.length || 0} definitions.`);
+                    // Defensive check: ensure data is an array
+                    let safeData = [];
+                    if (Array.isArray(data)) {
+                        safeData = data;
+                    } else if (data && Array.isArray(data.strategies)) {
+                        safeData = data.strategies;
+                    } else {
+                        console.warn('[StrategyCatalog] Expected array but got:', typeof data);
+                    }
+
+                    setStrategies(safeData);
+                    console.log(`[StrategyCatalog] Loaded ${safeData.length} definitions.`);
                 }
             } catch (err) {
                 if (isMounted.current) {
