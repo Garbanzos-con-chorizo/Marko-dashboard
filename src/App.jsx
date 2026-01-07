@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { StrategyProvider } from './context/StrategyContext';
 import { TelemetryProvider } from './context/TelemetryContext';
+import { StrategyCatalogProvider } from './context/StrategyCatalogContext'; // Phase 1 Integration
 import { api } from './services/api'; // Import api service
 import Layout from './components/Layout';
 import Overview from './pages/Overview';
@@ -34,11 +35,13 @@ function App() {
 
   return (
     <BrowserRouter>
-      <StrategyProvider>
-        <TelemetryProvider>
-          <DashInner />
-        </TelemetryProvider>
-      </StrategyProvider>
+      <StrategyCatalogProvider>
+        <StrategyProvider>
+          <TelemetryProvider>
+            <DashInner />
+          </TelemetryProvider>
+        </StrategyProvider>
+      </StrategyCatalogProvider>
     </BrowserRouter>
   );
 }
