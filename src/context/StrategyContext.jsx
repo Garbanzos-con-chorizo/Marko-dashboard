@@ -109,6 +109,7 @@ export const StrategyProvider = ({ children }) => {
         selectedStrategyId,
         selectStrategy,
         controlStrategy: handleControlStrategy,
+        refreshStrategies: fetchStrategies,
         loading,
         error
     };
