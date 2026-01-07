@@ -371,10 +371,88 @@ async function wakeUp() {
   }
 }
 
+
+// Mock Events Generator with filtering
+const generateMockLogs = (params) => {
+  const { limit = 50, offset = 0, level, instance_id } = params;
+  const levels = ['INFO', 'WARN', 'ERROR', 'DEBUG'];
+  const instances = ['Trend_BTC_1h', 'MeanRev_ETH_15m', 'Arb_SOL_5m', 'BTC_BOT_1'];
+  const modules = ['ENGINE', 'STRATEGY', 'RISK', 'EXCHANGE'];
+
+  const allLogs = [];
+  const TOTAL_MOCK_LOGS = 150;
+
+  // Generate a deterministic set of logs
+  for (let i = 0; i < TOTAL_MOCK_LOGS; i++) {
+    const timestamp = new Date(Date.now() - i * 60000).toISOString();
+    // Cyclical distribution
+    const lvl = levels[i % levels.length];
+    const inst = instances[i % instances.length];
+
+    allLogs.push({
+      timestamp,
+      level: lvl,
+      message: `System event log #${i} - ${lvl} occurred in process.`,
+      module: modules[i % modules.length],
+      instance_id: inst
+    });
+  }
+
+  // Filter
+  let filtered = allLogs;
+  if (level) {
+    filtered = filtered.filter(l => l.level === level);
+  }
+  if (instance_id) {
+    filtered = filtered.filter(l => l.instance_id === instance_id);
+  }
+
+  // Paginate
+  const sliced = filtered.slice(offset, offset + limit);
+
+  return {
+    total: filtered.length,
+    limit,
+    offset,
+    logs: sliced
+  };
+};
+
+async function fetchSystemLogs(params = {}) {
+  // Params: limit, offset, level, instance_id
+  if (IS_MOCK) {
+    await sleep(MOCK_DELAY);
+    return generateMockLogs(params);
+  }
+
+  const query = new URLSearchParams();
+  if (params.limit) query.append('limit', params.limit);
+  if (params.offset) query.append('offset', params.offset);
+  if (params.level) query.append('level', params.level);
+  if (params.instance_id) query.append('instance_id', params.instance_id);
+
+  const url = `${API_BASE_URL}/api/v1/events?${query.toString()}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      // Fallback for V1 legacy if V1 events endpoint doesn't support filtering yet?
+      // Assuming backend spec is implemented.
+      throw new Error(`Logs API Error: ${response.status} ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`Fetch logs failed:`, error);
+    // return empty structure on fail
+    return { total: 0, limit: params.limit || 50, offset: params.offset || 0, logs: [] };
+  }
+}
+
 export const api = {
   getTelemetry: fetchTelemetry,
   getChartData: fetchChartData,
   getStrategies: fetchStrategies,
   controlStrategy: controlStrategy,
+  getSystemLogs: fetchSystemLogs,
   wakeUp: wakeUp
 };
