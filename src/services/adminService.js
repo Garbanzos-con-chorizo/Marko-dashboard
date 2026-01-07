@@ -34,6 +34,70 @@ async function installStrategy(repositoryUrl, version = 'main') {
     }
 }
 
+async function createInstance(strategyId, config) {
+    if (IS_MOCK) {
+        console.log(`[MOCK] Creating instance for ${strategyId}`, config);
+        await new Promise(r => setTimeout(r, 800));
+        return { success: true, message: 'Instance created (MOCK). Restart required.' };
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v2/admin/instances`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                strategy_id: strategyId,
+                instance_id: config.instanceId,
+                symbol: config.symbol,
+                timeframe: config.timeframe,
+                parameters: config.parameters || {}
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Create Failed: ${response.status} - ${errorText}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to create instance:', error);
+        throw error;
+    }
+}
+
+async function deleteInstance(instanceId) {
+    if (IS_MOCK) {
+        console.log(`[MOCK] Deleting instance ${instanceId}`);
+        await new Promise(r => setTimeout(r, 800));
+        return { success: true, message: 'Instance deleted (MOCK). Restart required.' };
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v2/admin/instances/${instanceId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Delete Failed: ${response.status} - ${errorText}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to delete instance:', error);
+        throw error;
+    }
+}
+
+
 export const adminService = {
-    installStrategy
+    installStrategy,
+    createInstance,
+    deleteInstance
 };

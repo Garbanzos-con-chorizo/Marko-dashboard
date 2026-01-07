@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { useStrategyCatalog } from '../context/StrategyCatalogContext';
 import { adminService } from '../services/adminService';
-import { Package, Download, GitBranch, Terminal, AlertCircle, Search, Info } from 'lucide-react';
+import { Package, Download, GitBranch, Terminal, AlertCircle, Search, Info, Plus } from 'lucide-react';
+import ConfigureInstanceModal from '../components/ConfigureInstanceModal';
 
 export default function Marketplace() {
     const { strategies, loading, error: catalogError } = useStrategyCatalog();
     const [installModalOpen, setInstallModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Config Modal State
+    const [selectedStrategy, setSelectedStrategy] = useState(null); // Strategy object for config modal
+    const [toastMessage, setToastMessage] = useState(null); // Global success toast
 
     // Install State
     const [repoUrl, setRepoUrl] = useState('');
@@ -39,6 +44,11 @@ export default function Marketplace() {
         }
     };
 
+    const handleInstanceCreated = () => {
+        setToastMessage("Instance created successfully. Restart engine to activate.");
+        setTimeout(() => setToastMessage(null), 5000);
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-full text-textMuted font-mono animate-pulse">
@@ -48,7 +58,15 @@ export default function Marketplace() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {/* Success Toast */}
+            {toastMessage && (
+                <div className="fixed top-20 right-8 z-50 p-4 bg-statusGood/10 border border-statusGood/20 backdrop-blur-md rounded shadow-lg text-statusGood flex items-center gap-3 animate-slideIn">
+                    <Info size={20} />
+                    <span className="font-bold text-sm tracking-wide">{toastMessage}</span>
+                </div>
+            )}
+
             <header className="flex items-center justify-between border-b border-border pb-4">
                 <div>
                     <h1 className="text-2xl font-bold text-text mb-1 flex items-center gap-2">
@@ -119,13 +137,18 @@ export default function Marketplace() {
                         </div>
 
                         <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                            <button className="text-xs font-bold text-primary hover:text-primaryHighlight transition-colors flex items-center gap-1">
-                                VIEW DETAILS <Info size={12} />
+                            {/* Placeholder for Details - could open another modal */}
+                            <button className="text-xs font-bold text-textSecondary hover:text-text transition-colors flex items-center gap-1">
+                                <Info size={12} /> DETAILS
                             </button>
-                            {/* Placeholder for future "Create Instance" action */}
-                            <span className="text-[10px] text-textMuted italic">
-                                {strategy.instances_count || 0} Instances
-                            </span>
+
+                            <button
+                                onClick={() => setSelectedStrategy(strategy)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded hover:bg-primary hover:text-background transition-all text-xs font-bold shadow-sm"
+                            >
+                                <Plus size={12} strokeWidth={3} />
+                                ADD TO FLEET
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -224,6 +247,14 @@ export default function Marketplace() {
                         </footer>
                     </div>
                 </div>
+            )}
+            {/* Configure Instance Modal */}
+            {selectedStrategy && (
+                <ConfigureInstanceModal
+                    strategy={selectedStrategy}
+                    onClose={() => setSelectedStrategy(null)}
+                    onSuccess={handleInstanceCreated}
+                />
             )}
         </div>
     );
