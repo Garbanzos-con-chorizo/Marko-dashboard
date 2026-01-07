@@ -1,41 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 import { useStrategy } from '../context/StrategyContext';
+import { useStrategyCatalog } from '../context/StrategyCatalogContext';
 import StatCard from '../components/StatCard';
+import SchemaMetrics from '../components/SchemaMetrics'; // Import Schema Metrics
 import { AlertCircle, Loader } from 'lucide-react';
-
-// Helper functions for interpretative labels
-const getPhiLabel = (phi) => {
-    if (phi === null || phi === undefined) return 'Unknown';
-    if (phi < 0.3) return 'Low';
-    if (phi < 0.7) return 'Medium';
-    return 'High';
-};
-
-const getVolatilityLabel = (volatility) => {
-    if (volatility === null || volatility === undefined) return 'Unknown';
-    if (volatility < 0.15) return 'Calm';
-    if (volatility < 0.30) return 'Normal';
-    return 'Elevated';
-};
-
-const getRiskMultiplierLabel = (multiplier) => {
-    if (multiplier === null || multiplier === undefined) return 'Unknown';
-    if (multiplier < 0.8) return 'Defensive';
-    if (multiplier < 1.2) return 'Neutral';
-    return 'Aggressive';
-};
-
-const getConvictionLabel = (conviction) => {
-    if (conviction === null || conviction === undefined) return 'Unknown';
-    if (conviction < 0.4) return 'Low Confidence';
-    if (conviction < 0.7) return 'Medium Confidence';
-    return 'High Confidence';
-};
 
 export default function Strategy() {
     const { data, refreshTelemetry, error, loading } = useTelemetry();
     const { strategies, selectedStrategyId } = useStrategy();
+    const { fetchSchema } = useStrategyCatalog();
+    const [currentSchema, setCurrentSchema] = useState(null);
 
     // Defensive destructuring
     const strategy = data?.strategy;
@@ -47,6 +22,18 @@ export default function Strategy() {
     useEffect(() => {
         refreshTelemetry();
     }, []);
+
+    // Fetch Schema when strategy metadata is available
+    useEffect(() => {
+        if (strategy?.name) { // Assumes name keys to definition ID
+            // In a robust system we'd look up the definition ID from the instance registry
+            // Here we try name, or extract from instance ID (e.g. Trend_BTC -> Trend)
+            // For now, simpler is better: check if 'name' works.
+            fetchSchema(strategy.name).then(schema => {
+                if (schema) setCurrentSchema(schema);
+            });
+        }
+    }, [strategy?.name, fetchSchema]);
 
     if (error) {
         return (
@@ -79,7 +66,7 @@ export default function Strategy() {
 
     const {
         regime,
-        phi,
+        phi, // Fallback fields
         volatility,
         risk_multiplier,
         conviction_score,
@@ -102,65 +89,49 @@ export default function Strategy() {
                     </p>
                 )}
                 <p className="text-xs text-textMuted mt-1">
-                    These logical fields are specific to this strategy instance's isolated memory and parameters.
+                    {currentSchema
+                        ? "Dynamic telemetry provided by strategy schema."
+                        : "Displaying legacy standard telemetry fields."}
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                <StatCard
-                    label="Current Regime"
-                    value={(regime ?? 'UNKNOWN').replace(/_/g, ' ')}
-                    subValue="Markov Model State"
-                />
+            {/* Render Schema-Driven Metrics if Schema exists, else Legacy Fallback */}
+            {currentSchema ? (
+                <SchemaMetrics schema={currentSchema} data={strategy} />
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                    <StatCard
+                        label="Current Regime"
+                        value={(regime ?? 'UNKNOWN').replace(/_/g, ' ')}
+                        subValue="Markov Model State"
+                    />
 
-                <div className="card flex flex-col gap-2">
-                    <div className="text-[11px] text-textMuted uppercase tracking-wider font-medium">
-                        φ (Phi) • Regime Stability
+                    <div className="card flex flex-col gap-2">
+                        <div className="text-[11px] text-textMuted uppercase tracking-wider font-medium">
+                            φ (Phi) • Regime Stability
+                        </div>
+                        <div className="text-2xl font-mono text-text font-medium">
+                            {phi !== null && phi !== undefined ? phi.toFixed(3) : '—'}
+                        </div>
+                        <div className="text-xs text-textSecondary">
+                            {/* Inline logic for legacy label */}
+                            {phi < 0.3 ? 'Low' : phi < 0.7 ? 'Medium' : 'High'}
+                        </div>
                     </div>
-                    <div className="text-2xl font-mono text-text font-medium">
-                        {phi !== null && phi !== undefined ? phi.toFixed(3) : '—'}
-                    </div>
-                    <div className="text-xs text-textSecondary">
-                        {getPhiLabel(phi)}
+
+                    <div className="card flex flex-col gap-2">
+                        <div className="text-[11px] text-textMuted uppercase tracking-wider font-medium">
+                            Volatility
+                        </div>
+                        <div className="text-2xl font-mono text-text font-medium">
+                            {volatility !== null && volatility !== undefined ? (volatility * 100).toFixed(1) + '%' : '—'}
+                        </div>
+                        <div className="text-xs text-textSecondary">
+                            {volatility < 0.15 ? 'Calm' : volatility < 0.30 ? 'Normal' : 'Elevated'}
+                        </div>
                     </div>
                 </div>
-
-                <div className="card flex flex-col gap-2">
-                    <div className="text-[11px] text-textMuted uppercase tracking-wider font-medium">
-                        Volatility
-                    </div>
-                    <div className="text-2xl font-mono text-text font-medium">
-                        {volatility !== null && volatility !== undefined ? (volatility * 100).toFixed(1) + '%' : '—'}
-                    </div>
-                    <div className="text-xs text-textSecondary">
-                        {getVolatilityLabel(volatility)}
-                    </div>
-                </div>
-
-                <div className="card flex flex-col gap-2">
-                    <div className="text-[11px] text-textMuted uppercase tracking-wider font-medium">
-                        Risk Multiplier
-                    </div>
-                    <div className="text-2xl font-mono text-text font-medium">
-                        {risk_multiplier !== null && risk_multiplier !== undefined ? risk_multiplier.toFixed(2) + 'x' : '—'}
-                    </div>
-                    <div className="text-xs text-textSecondary">
-                        {getRiskMultiplierLabel(risk_multiplier)}
-                    </div>
-                </div>
-
-                <div className="card flex flex-col gap-2">
-                    <div className="text-[11px] text-textMuted uppercase tracking-wider font-medium">
-                        Conviction Score
-                    </div>
-                    <div className="text-2xl font-mono text-text font-medium">
-                        {conviction_score !== null && conviction_score !== undefined ? (conviction_score * 100).toFixed(1) + '%' : '—'}
-                    </div>
-                    <div className="text-xs text-textSecondary">
-                        {getConvictionLabel(conviction_score)}
-                    </div>
-                </div>
-            </div>
+            )}
 
             <div className="flex flex-col lg:flex-row gap-4 mt-4">
                 {/* Active Filters */}
