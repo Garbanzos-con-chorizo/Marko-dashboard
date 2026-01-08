@@ -74,15 +74,21 @@ export default function Strategies() {
                     const isSelected = s.id === selectedStrategyId;
 
                     // High-fidelity synchronization for selected strategy
-                    // Only override if we are actively receiving an affirmative status from telemetry
+                    // CRITICAL FIX: If the fleet list says the strategy is STOPPED, REMOVED, or ERROR, 
+                    // we must respect that and NOT let stale telemetry override it to "RUNNING".
+                    const listStatus = (s.status || '').toUpperCase();
+                    const isListStopped = listStatus === 'STOPPED' || listStatus === 'REMOVED' || listStatus === 'ERROR' || listStatus === 'CRASHED';
+
                     const strategy = isSelected && telemetryData?.status
                         ? {
                             ...s,
-                            // If telemetry explicitly says "RUNNING" or "STARTING", use it.
-                            // Otherwise, trust the fleet list status (which might be "STOPPED" or "PAUSED")
-                            status: (telemetryData.status.status && telemetryData.status.status !== 'UNKNOWN')
-                                ? telemetryData.status.status
-                                : s.status,
+                            // Only allow telemetry to upgrade the status if the list thinks we are active/starting.
+                            // If the list says we are stopped, we are stopped.
+                            status: isListStopped
+                                ? s.status
+                                : (telemetryData.status.status && telemetryData.status.status !== 'UNKNOWN')
+                                    ? telemetryData.status.status
+                                    : s.status,
 
                             // Always take PnL from telemetry if available
                             active_pnl: telemetryData.status.unrealizedPnL ?? s.active_pnl
