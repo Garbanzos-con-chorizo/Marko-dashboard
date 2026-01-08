@@ -309,8 +309,8 @@ async function fetchStrategies() {
     return generateStrategyList();
   }
 
-  // Updated to use the Admin Instances endpoint which provides live PnL per instance
-  const url = `${API_BASE_URL}/api/v2/admin/instances`;
+  // Reverted to /api/v2/strategies because /admin/instances returned 405 Method Not Allowed
+  const url = `${API_BASE_URL}/api/v2/strategies`;
   try {
     const response = await fetch(url);
     if (!response.ok) {
