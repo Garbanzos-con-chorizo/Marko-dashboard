@@ -45,6 +45,8 @@ const generateTelemetry = (strategyId = 'legacy') => {
   const isEth = strategyId.includes('ETH');
   const symbol = isEth ? 'ETH-USD' : 'BTC-USD';
   const price = isEth ? 3500 : 67400;
+  // Mock PnL for pocket
+  const mockPocketPnL = isWarmingUp ? 0 : (isEth ? -320.10 : 1250.50);
 
   return {
     timestamp: new Date().toISOString(),
@@ -64,13 +66,15 @@ const generateTelemetry = (strategyId = 'legacy') => {
     // Strategy matches StrategyState schema
     strategy: {
       name: strategyId === 'legacy' ? 'MARKO_V4' : strategyId,
-      markov_state: isWarmingUp ? null : 'VOLATILITY_EXPANSION', // "regime" in V1, "markov_state" in V2/Shared
+      markov_state: isWarmingUp ? null : 'VOLATILITY_EXPANSION',
       phi: isWarmingUp ? null : 0.85,
       volatility: isWarmingUp ? null : 0.22,
       risk_multiplier: isWarmingUp ? null : 1.2,
       conviction_score: isWarmingUp ? null : 0.85,
       active_filters: isWarmingUp ? [] : ['trend', 'volatility'],
-      last_decision: isWarmingUp ? 'WAIT' : 'REBALANCE'
+      last_decision: isWarmingUp ? 'WAIT' : 'REBALANCE',
+      pocket_pnl: mockPocketPnL, // NEW: Pocket PnL
+      broker_type: 'PAPER'       // NEW: Execution Mode
     },
     // PortfolioSnapshot
     portfolio: {
@@ -79,6 +83,21 @@ const generateTelemetry = (strategyId = 'legacy') => {
       total_exposure_pct: isWarmingUp ? 0 : 0.6,
       positions: isWarmingUp ? [] : [
         { symbol: symbol, qty: isEth ? 10 : 0.5, avg_entry_price: price * 0.98, current_price: price, unrealized_pnl: 1000, market_value: 30000 },
+      ],
+      // NEW: Pockets Breakdown
+      pockets: [
+        {
+          pocket_id: strategyId,
+          equity: 10000 + mockPocketPnL,
+          unrealized_pnl: mockPocketPnL, // Simplified for mock
+          positions: [] // In real app, this would be populated
+        },
+        {
+          pocket_id: 'HODL_Strategy',
+          equity: 55000,
+          unrealized_pnl: 12000,
+          positions: []
+        }
       ]
     },
     recent_orders: isWarmingUp ? [] : [
@@ -123,8 +142,6 @@ function transformTelemetry(raw) {
   }
 
   // Normalize status logic:
-  // If the engine says "STARTING" but is_warming_up is false, it effectively means "RUNNING".
-  // This handles cases where the backend status update might lag or persist "STARTING".
   let engineStatus = (engineData?.status || 'UNKNOWN').toUpperCase();
   const isWarmingUp = engineData?.is_warming_up || false;
 
@@ -149,14 +166,17 @@ function transformTelemetry(raw) {
       name: strategyData?.name || raw.id || 'Unknown Strategy',
       // V2 Multi-Strategy: These fields are now instance-specific
       markov_state: strategyData?.markov_state || strategyData?.regime || 'UNKNOWN',
-      regime: strategyData?.markov_state || strategyData?.regime || 'UNKNOWN', // Keep both for compatibility
+      regime: strategyData?.markov_state || strategyData?.regime || 'UNKNOWN',
       phi: strategyData?.phi ?? null,
       volatility: strategyData?.volatility ?? null,
       conviction_score: strategyData?.conviction_score ?? null,
       risk_multiplier: strategyData?.risk_multiplier ?? null,
       active_filters: strategyData?.active_filters || [],
-      filters: filtersObj, // Object format for UI
-      last_decision: strategyData?.last_decision || 'No recent decision'
+      filters: filtersObj,
+      last_decision: strategyData?.last_decision || 'No recent decision',
+      // NEW: Pocket PnL and Metadata
+      pocket_pnl: strategyData?.pocket_pnl ?? null,
+      broker_type: strategyData?.broker_type || 'PAPER'
     },
     positions: (portfolioData?.positions || []).map(pos => ({
       symbol: pos.symbol,
@@ -166,6 +186,8 @@ function transformTelemetry(raw) {
       currentPrice: pos.current_price,
       marketValue: pos.market_value
     })),
+    // NEW: Pockets (Strategy Breakdown)
+    pockets: portfolioData?.pockets || [],
     events: raw.events || []
   };
 }

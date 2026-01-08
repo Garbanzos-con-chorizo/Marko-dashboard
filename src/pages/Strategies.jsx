@@ -130,6 +130,12 @@ export default function Strategies() {
                                         {isSelected && <span className="text-[10px] bg-primary text-background px-1.5 py-0.5 rounded font-sans font-bold">ACTIVE</span>}
                                     </h3>
                                     <div className="flex items-center gap-2 text-xs text-textMuted mt-1 font-mono">
+                                        <span className={`px-1 rounded text-[10px] font-bold ${(strategy.broker_type || 'PAPER') === 'LIVE'
+                                                ? 'bg-red-500/20 text-red-500 border border-red-500/30'
+                                                : 'bg-blue-500/20 text-blue-500 border border-blue-500/30'
+                                            }`}>
+                                            {strategy.broker_type || 'PAPER'}
+                                        </span>
                                         <span className="text-text">{strategy.symbol}</span>
                                         <span className="w-1 h-1 rounded-full bg-border"></span>
                                         <span>{strategy.timeframe}</span>
@@ -160,9 +166,9 @@ export default function Strategies() {
                                     {strategy.status || 'STOPPED'}
                                 </div>
 
-                                {/* Active PnL */}
+                                {/* Active PnL (Pocket PnL) */}
                                 <div className="flex flex-col items-end min-w-[100px]">
-                                    <span className="text-[10px] text-textMuted uppercase tracking-wider mb-0.5">Active PnL</span>
+                                    <span className="text-[10px] text-textMuted uppercase tracking-wider mb-0.5">Pocket PnL</span>
                                     <div className={`flex items-center gap-1.5 text-sm font-bold font-mono ${strategy.active_pnl >= 0 ? 'text-statusGood' : 'text-statusBad'}`}>
                                         {strategy.active_pnl >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                                         {strategy.active_pnl >= 0 ? '+' : ''}{(strategy.active_pnl || 0).toFixed(2)}

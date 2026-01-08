@@ -49,7 +49,56 @@ export default function Positions() {
                 </div>
             </div>
 
+            {/* Strategy Breakdown (Pockets) */}
             <div className="card p-0 overflow-hidden">
+                <div className="p-4 border-b border-border bg-surfaceHighlight/30">
+                    <h3 className="text-sm font-bold text-text uppercase tracking-wider">Strategy Breakdown</h3>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-sm">
+                        <thead>
+                            <tr className="bg-surfaceHighlight/50 text-left text-textMuted text-xs">
+                                <th className="p-4 font-medium whitespace-nowrap">STRATEGY ID</th>
+                                <th className="p-4 font-medium text-right whitespace-nowrap">EQUITY</th>
+                                <th className="p-4 font-medium text-right whitespace-nowrap">POCKET PnL</th>
+                                <th className="p-4 font-medium text-right whitespace-nowrap">POSITIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(!data?.pockets || data.pockets.length === 0) ? (
+                                <tr>
+                                    <td colSpan="4" className="p-6 text-center text-textMuted italic">
+                                        No strategy pockets active.
+                                    </td>
+                                </tr>
+                            ) : (
+                                data.pockets.map((pocket, idx) => (
+                                    <tr key={idx} className="border-b border-border last:border-0 hover:bg-surfaceHighlight/50 transition-colors">
+                                        <td className="p-4 font-mono font-semibold text-primary">
+                                            {pocket.pocket_id}
+                                        </td>
+                                        <td className="p-4 text-right font-mono text-text">
+                                            {formatCurrency(pocket.equity)}
+                                        </td>
+                                        <td className={`p-4 text-right font-mono font-bold ${(pocket.unrealized_pnl >= 0) ? 'text-statusGood' : 'text-statusBad'
+                                            }`}>
+                                            {(pocket.unrealized_pnl >= 0) ? '+' : ''}{formatCurrency(pocket.unrealized_pnl)}
+                                        </td>
+                                        <td className="p-4 text-right font-mono text-textSecondary">
+                                            {pocket.positions?.length || 0}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div className="card p-0 overflow-hidden">
+                <div className="p-4 border-b border-border bg-surfaceHighlight/30">
+                    <h3 className="text-sm font-bold text-text uppercase tracking-wider">Deep Position Detail</h3>
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-sm">
                         <thead>
