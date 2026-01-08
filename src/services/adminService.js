@@ -52,7 +52,8 @@ async function createInstance(strategyId, config) {
                 instance_id: config.instanceId,
                 symbol: config.symbol,
                 timeframe: config.timeframe,
-                parameters: config.parameters || {}
+                parameters: config.parameters || {},
+                broker_config: config.broker_config || null // NEW: Dynamic Broker Config
             })
         });
 

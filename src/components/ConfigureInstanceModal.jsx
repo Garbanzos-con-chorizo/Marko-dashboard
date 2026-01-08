@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
 import { adminService } from '../services/adminService';
-import { Play, Info, AlertTriangle } from 'lucide-react';
+import { Play, Info, AlertTriangle, Shield, Key } from 'lucide-react';
 
 export default function ConfigureInstanceModal({ strategy, onClose, onSuccess }) {
     const [instanceId, setInstanceId] = useState('');
     const [symbol, setSymbol] = useState('');
     const [timeframe, setTimeframe] = useState('1h');
+
+    // Broker Configuration State
+    const [broker, setBroker] = useState('ALPACA');
+    const [executionMode, setExecutionMode] = useState('PAPER');
+    const [apiKey, setApiKey] = useState('');
+    const [apiSecret, setApiSecret] = useState('');
+
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState(null);
 
@@ -27,7 +34,14 @@ export default function ConfigureInstanceModal({ strategy, onClose, onSuccess })
             await adminService.createInstance(strategy.id, {
                 instanceId,
                 symbol: symbol.toUpperCase(),
-                timeframe
+                timeframe,
+                // NEW: Broker Config Payload
+                broker_config: {
+                    broker,
+                    mode: executionMode,
+                    api_key: apiKey || null,
+                    api_secret: apiSecret || null
+                }
             });
             onSuccess();
             onClose();
@@ -67,7 +81,7 @@ export default function ConfigureInstanceModal({ strategy, onClose, onSuccess })
                         </div>
                     )}
 
-                    {/* Form */}
+                    {/* Basic Configuration */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
                             <label className="block text-xs font-bold text-textSecondary uppercase mb-1.5 ml-1">Symbol</label>
@@ -118,7 +132,71 @@ export default function ConfigureInstanceModal({ strategy, onClose, onSuccess })
                         />
                     </div>
 
-                    <div className="p-3 bg-surfaceHighlight/50 border border-border rounded text-xs text-textMuted">
+                    {/* Broker Configuration */}
+                    <div className="border-t border-border pt-4 mt-4">
+                        <h3 className="text-xs font-bold text-primary tracking-widest uppercase mb-3 flex items-center gap-2">
+                            <Shield size={14} /> BROKER SETTINGS
+                        </h3>
+
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label className="block text-[10px] font-bold text-textMuted uppercase mb-1">Provider</label>
+                                <select
+                                    value={broker}
+                                    onChange={(e) => setBroker(e.target.value)}
+                                    className="w-full p-2.5 bg-background border border-border rounded text-sm focus:border-primary"
+                                    disabled={isCreating}
+                                >
+                                    <option value="ALPACA">Alpaca Markets</option>
+                                    <option value="BINANCE">Binance</option>
+                                    <option value="COINBASE">Coinbase</option>
+                                    <option value="PAPER">Internal Paper</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-textMuted uppercase mb-1">Execution Mode</label>
+                                <select
+                                    value={executionMode}
+                                    onChange={(e) => setExecutionMode(e.target.value)}
+                                    className="w-full p-2.5 bg-background border border-border rounded text-sm focus:border-primary"
+                                    disabled={isCreating}
+                                >
+                                    <option value="PAPER">Paper Trading</option>
+                                    <option value="LIVE">Live Trading</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Credentials Inputs */}
+                        <div className="space-y-3 bg-surfaceHighlight/30 p-3 rounded-lg border border-border/50">
+                            <div className="flex items-start gap-2 mb-2">
+                                <Key size={14} className="text-textMuted mt-0.5" />
+                                <span className="text-[10px] font-bold text-textMuted uppercase">API Credentials (Optional)</span>
+                            </div>
+
+                            <input
+                                type="text"
+                                placeholder="Public API Key (e.g. PK...)"
+                                value={apiKey}
+                                onChange={(e) => setApiKey(e.target.value)}
+                                className="w-full p-2 bg-background border border-border rounded text-xs font-mono placeholder:text-textMuted/50 focus:border-primary"
+                                disabled={isCreating}
+                            />
+                            <input
+                                type="password"
+                                placeholder="Secret Key"
+                                value={apiSecret}
+                                onChange={(e) => setApiSecret(e.target.value)}
+                                className="w-full p-2 bg-background border border-border rounded text-xs font-mono placeholder:text-textMuted/50 focus:border-primary"
+                                disabled={isCreating}
+                            />
+                            <p className="text-[10px] text-textMuted italic">
+                                Leave blank to use system default environment variables.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="p-3 bg-surfaceHighlight/50 border border-border rounded text-xs text-textMuted mt-2">
                         <div className="flex items-center gap-2 mb-1 font-bold text-textSecondary">
                             <Info size={14} />
                             <span>DEPLOYMENT NOTE</span>
