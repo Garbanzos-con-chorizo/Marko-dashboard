@@ -309,7 +309,8 @@ async function fetchStrategies() {
     return generateStrategyList();
   }
 
-  const url = `${API_BASE_URL}/api/v2/strategies`;
+  // Updated to use the Admin Instances endpoint which provides live PnL per instance
+  const url = `${API_BASE_URL}/api/v2/admin/instances`;
   try {
     const response = await fetch(url);
     if (!response.ok) {

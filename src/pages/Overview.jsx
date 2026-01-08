@@ -1,51 +1,109 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 import { useStrategy } from '../context/StrategyContext';
 import StatCard from '../components/StatCard';
 import PriceChart from '../components/PriceChart';
+import { Link } from 'react-router-dom';
+import { Settings, Activity } from 'lucide-react';
 
 export default function Overview() {
-    const { data, chartData, loading, refreshTelemetry, refreshChart } = useTelemetry();
-    const { strategies, selectedStrategyId } = useStrategy();
-    const { status } = data;
+    const { data: telemetryData, chartData, loading, refreshTelemetry, refreshChart } = useTelemetry();
+    const { strategies, selectedStrategyId, selectStrategy } = useStrategy();
 
-    // Get the current strategy info
+    // Derived state for the "Current View"
+    // Option A: Prefer "Selected" strategy from global context
     const currentStrategy = strategies.find(s => s.id === selectedStrategyId);
+
+    // If no strategy is explicitly selected but we have a running fleet, 
+    // we might want to default to the "first running" one if the context didn't already.
+    // However, StrategyContext usually handles selection defaults.
 
     // Refresh data when page loads
     useEffect(() => {
         refreshTelemetry();
         refreshChart();
-    }, []);
+    }, [selectedStrategyId]); // Re-fetch if selection changes
 
-    if (loading) return <div className="text-textMuted">Initializing telemetry stream...</div>;
-    if (!status) return null;
+    // Loading state handling
+    if (loading && !telemetryData?.status) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-textMuted animate-pulse space-y-4">
+                <Activity size={32} className="text-primary" />
+                <span className="font-mono tracking-widest text-xs">ESTABLISHING UPLINK...</span>
+            </div>
+        );
+    }
 
-    const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+    // If we have no active strategies, show a "Welcome/Empty" state
+    if (strategies.length === 0 && !loading) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-6">
+                <div className="p-6 bg-surfaceHighlight rounded-full">
+                    <Activity size={48} className="text-textMuted" />
+                </div>
+                <div>
+                    <h2 className="text-2xl font-bold text-text mb-2">Systems Offline</h2>
+                    <p className="text-textSecondary max-w-md mx-auto">
+                        No active strategy instances detected. Deploy a strategy from the Marketplace to begin autonomous trading operations.
+                    </p>
+                </div>
+                <Link
+                    to="/marketplace"
+                    className="px-6 py-3 bg-primary text-background font-bold rounded hover:bg-primary/90 transition-all flex items-center gap-2"
+                >
+                    <Settings size={18} />
+                    OPEN MARKETPLACE
+                </Link>
+            </div>
+        );
+    }
 
-    const normalizedStatus = (status.status || '').toUpperCase();
+    // Telemetry Data (V2 Structure)
+    // The TelemetryContext already normalizes V1/V2 differences into `telemetryData`.
+    const { status } = telemetryData || {};
+    if (!status) return null; // Should be handled by loading state, but defensive
+
+    const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
+
+    const normalizedStatus = (status.status || 'UNKNOWN').toUpperCase();
     const isRunning = normalizedStatus === 'RUNNING' || normalizedStatus === 'ACTIVE' || normalizedStatus === 'LIVE';
 
     const statusClasses = isRunning
-        ? 'bg-green-400/10 text-statusGood border-current'
-        : 'bg-red-400/10 text-statusBad border-current';
+        ? 'bg-statusGood/10 text-statusGood border-statusGood/20'
+        : normalizedStatus === 'STARTING' || normalizedStatus === 'WARMUP'
+            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+            : 'bg-statusBad/10 text-textMuted border-statusBad/20'; // Stopped/Error
 
     return (
-        <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col gap-6 animate-fadeIn">
+            {/* Header / Selector */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border pb-4">
                 <div>
-                    <h2 className="text-xl font-semibold">System Overview</h2>
-                    {currentStrategy && (
-                        <p className="text-sm text-textMuted font-mono mt-1">
-                            Viewing: <span className="text-primary">{currentStrategy.id}</span> • {currentStrategy.symbol} • {currentStrategy.timeframe}
+                    <h2 className="text-xl font-bold text-text font-mono tracking-tight flex items-center gap-2">
+                        <Activity size={20} className="text-primary" />
+                        SYSTEM OVERVIEW
+                    </h2>
+                    {currentStrategy ? (
+                        <p className="text-xs text-textMuted font-mono mt-1 flex items-center gap-2">
+                            TARGET: <span className="text-text font-bold text-primary">{currentStrategy.id}</span>
+                            <span className="opacity-30">|</span>
+                            {currentStrategy.symbol}
+                            <span className="opacity-30">|</span>
+                            {currentStrategy.timeframe}
                         </p>
+                    ) : (
+                        <p className="text-xs text-textMuted font-mono mt-1">Global Aggregate View</p>
                     )}
                 </div>
-                <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusClasses}`}>
+
+                {/* Status Pill */}
+                <div className={`px-4 py-1.5 rounded-full text-xs font-bold font-mono border flex items-center gap-2 ${statusClasses}`}>
+                    <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-current animate-pulse' : 'bg-current'}`} />
                     {status.status}
                 </div>
             </div>
 
+            {/* Key Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     label="Total Equity"
@@ -70,13 +128,60 @@ export default function Overview() {
                 />
             </div>
 
-            {/* Price Chart */}
-            <PriceChart chartData={chartData} />
+            {/* Main Content Area */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Chart takes up 2/3 */}
+                <div className="lg:col-span-2 space-y-4">
+                    <div className="bg-surface border border-border rounded-lg p-1">
+                        <PriceChart chartData={chartData} />
+                    </div>
+                </div>
 
-            <div className="card mt-4">
-                <h3 className="text-sm text-textMuted mb-3 uppercase tracking-wider">Last Engine Action</h3>
-                <div className="font-mono text-base text-primary">
-                    {status.lastAction}
+                {/* Side Feed / Strategy Info 1/3 */}
+                <div className="space-y-4">
+                    {/* Last Action Card */}
+                    <div className="bg-surface border border-border rounded-lg p-5">
+                        <h3 className="text-xs text-textMuted mb-2 uppercase tracking-wider font-bold">Latest Decision</h3>
+                        <div className="text-2xl font-mono font-medium text-text">
+                            {status.lastAction}
+                        </div>
+                        {currentStrategy && (
+                            <div className="mt-4 pt-4 border-t border-border/50 text-xs font-mono text-textSecondary space-y-1">
+                                <div className="flex justify-between">
+                                    <span>Regime:</span>
+                                    <span className="text-text">{telemetryData.strategy.regime}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Phi (Stability):</span>
+                                    <span className="text-text">{telemetryData.strategy.phi?.toFixed(2) ?? '-'}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Quick Strategy Switcher (Compact) */}
+                    {strategies.length > 1 && (
+                        <div className="bg-surface border border-border rounded-lg p-4">
+                            <h3 className="text-xs text-textMuted mb-3 uppercase tracking-wider font-bold">Active Fleet</h3>
+                            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                                {strategies.map(s => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => selectStrategy(s.id)}
+                                        className={`w-full text-left px-3 py-2 rounded text-xs font-mono transition-colors flex justify-between items-center ${s.id === selectedStrategyId
+                                                ? 'bg-primary/10 text-primary border border-primary/20'
+                                                : 'hover:bg-surfaceHighlight text-textSecondary border border-transparent'
+                                            }`}
+                                    >
+                                        <span>{s.id}</span>
+                                        <span className={s.status === 'RUNNING' ? 'text-statusGood' : 'text-textMuted'}>
+                                            ●
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
