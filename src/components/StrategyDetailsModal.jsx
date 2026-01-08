@@ -111,14 +111,14 @@ export default function StrategyDetailsModal({ strategy, onClose }) {
                                                 <span className="block text-[10px] text-textMuted uppercase font-bold mb-1">Author</span>
                                                 <div className="flex items-center gap-2 text-sm text-text font-mono">
                                                     <GitBranch size={14} className="text-primary" />
-                                                    {strategy.author || 'Internal Maintainer'}
+                                                    {schema?.author || strategy.author || 'Internal Maintainer'}
                                                 </div>
                                             </div>
                                             <div className="p-4 bg-background border border-border rounded-lg">
                                                 <span className="block text-[10px] text-textMuted uppercase font-bold mb-1">Entrypoint</span>
                                                 <div className="flex items-center gap-2 text-sm text-text font-mono">
                                                     <Terminal size={14} className="text-primary" />
-                                                    {strategy.entrypoint || 'main.py'}
+                                                    {schema?.entrypoint || strategy.entrypoint || 'main.py'}
                                                 </div>
                                             </div>
                                         </div>
@@ -135,11 +135,22 @@ export default function StrategyDetailsModal({ strategy, onClose }) {
                                                         <List size={14} /> Metrics Provided
                                                     </h4>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {schema.telemetry_fields?.map(field => (
-                                                            <span key={field} className="px-2 py-1 bg-surfaceHighlight text-textSecondary border border-border rounded text-[10px] font-mono">
-                                                                {field}
-                                                            </span>
-                                                        )) || <span className="text-textMuted text-xs italic">Generic metrics only</span>}
+                                                        {/* Parse fields from either root flat list (legacy) or telemetry_schema object (V4) */}
+                                                        {(() => {
+                                                            const rawFields = schema.telemetry_schema?.fields || schema.fields || schema.telemetry_fields;
+                                                            if (Array.isArray(rawFields)) {
+                                                                return rawFields.map(f => {
+                                                                    // Handle both object-style {name: 'phi'} and string-style 'phi'
+                                                                    const name = typeof f === 'object' ? f.name : f;
+                                                                    return (
+                                                                        <span key={name} className="px-2 py-1 bg-surfaceHighlight text-textSecondary border border-border rounded text-[10px] font-mono">
+                                                                            {name}
+                                                                        </span>
+                                                                    );
+                                                                });
+                                                            }
+                                                            return <span className="text-textMuted text-xs italic">Generic metrics only</span>;
+                                                        })()}
                                                     </div>
                                                 </div>
 
