@@ -149,8 +149,6 @@ export default function ConfigureInstanceModal({ strategy, onClose, onSuccess })
                                 >
                                     <option value="ALPACA">Alpaca Markets</option>
                                     <option value="BINANCE">Binance</option>
-                                    <option value="COINBASE">Coinbase</option>
-                                    <option value="PAPER">Internal Paper</option>
                                 </select>
                             </div>
                             <div>
