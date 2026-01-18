@@ -9,7 +9,7 @@ import { AlertCircle, Loader } from 'lucide-react';
 export default function Strategy() {
     const { data, refreshTelemetry, error, loading } = useTelemetry();
     const { strategies, selectedStrategyId } = useStrategy();
-    const { fetchSchema } = useStrategyCatalog();
+    const { fetchSchema, strategies: catalogDefinitions } = useStrategyCatalog();
     const [currentSchema, setCurrentSchema] = useState(null);
 
     // Defensive destructuring
@@ -23,17 +23,45 @@ export default function Strategy() {
         refreshTelemetry();
     }, []);
 
+    const normalizeId = (value) => {
+        if (!value) return '';
+        return String(value).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    };
+
+    const resolveDefinitionId = (candidates = []) => {
+        if (!catalogDefinitions || catalogDefinitions.length === 0) return null;
+        const normalizedCandidates = candidates.map(normalizeId).filter(Boolean);
+        if (normalizedCandidates.length === 0) return null;
+
+        for (const def of catalogDefinitions) {
+            const defId = String(def.id);
+            const defName = normalizeId(def.name);
+            const defEntrypoint = normalizeId(def.entrypoint);
+            if (
+                normalizedCandidates.includes(normalizeId(defId)) ||
+                (defName && normalizedCandidates.includes(defName)) ||
+                (defEntrypoint && normalizedCandidates.includes(defEntrypoint))
+            ) {
+                return defId;
+            }
+        }
+
+        return null;
+    };
+
     // Fetch Schema when strategy metadata is available
     useEffect(() => {
-        if (strategy?.name) { // Assumes name keys to definition ID
-            // In a robust system we'd look up the definition ID from the instance registry
-            // Here we try name, or extract from instance ID (e.g. Trend_BTC -> Trend)
-            // For now, simpler is better: check if 'name' works.
-            fetchSchema(strategy.name).then(schema => {
+        const definitionId = resolveDefinitionId([
+            strategy?.name,
+            currentStrategy?.id
+        ]);
+
+        if (definitionId) {
+            fetchSchema(definitionId).then(schema => {
                 if (schema) setCurrentSchema(schema);
             });
         }
-    }, [strategy?.name, fetchSchema]);
+    }, [strategy?.name, currentStrategy?.id, catalogDefinitions, fetchSchema]);
 
     if (error) {
         return (
