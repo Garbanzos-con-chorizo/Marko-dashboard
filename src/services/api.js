@@ -178,6 +178,7 @@ function transformTelemetry(raw) {
       pocket_pnl: strategyData?.pocket_pnl ?? null,
       broker_type: strategyData?.broker_type || 'PAPER'
     },
+    telemetry_schema: raw.telemetry_schema || null,
     positions: (portfolioData?.positions || []).map(pos => ({
       symbol: pos.symbol,
       size: pos.qty,

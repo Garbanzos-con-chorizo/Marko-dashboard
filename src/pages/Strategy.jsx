@@ -49,8 +49,18 @@ export default function Strategy() {
         return null;
     };
 
-    // Fetch Schema when strategy metadata is available
+    // Prefer schema directly from telemetry (if available)
     useEffect(() => {
+        if (data?.telemetry_schema) {
+            setCurrentSchema(data.telemetry_schema);
+        }
+    }, [data?.telemetry_schema]);
+
+    // Fetch Schema from catalog when strategy metadata is available
+    useEffect(() => {
+        if (data?.telemetry_schema) {
+            return;
+        }
         const definitionId = resolveDefinitionId([
             strategy?.name,
             currentStrategy?.id
@@ -61,7 +71,7 @@ export default function Strategy() {
                 if (schema) setCurrentSchema(schema);
             });
         }
-    }, [strategy?.name, currentStrategy?.id, catalogDefinitions, fetchSchema]);
+    }, [data?.telemetry_schema, strategy?.name, currentStrategy?.id, catalogDefinitions, fetchSchema]);
 
     if (error) {
         return (
