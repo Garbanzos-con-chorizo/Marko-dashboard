@@ -38,6 +38,12 @@ export default function SchemaMetrics({ schema, data }) {
         return <div className="text-textMuted text-xs font-mono">No schema definition available.</div>;
     }
 
+    const getFieldName = (field) => {
+        if (typeof field === 'string') return field;
+        if (field && typeof field === 'object') return field.name || '';
+        return '';
+    };
+
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {/* Always show Regime if present, assuming it's core */}
@@ -50,21 +56,23 @@ export default function SchemaMetrics({ schema, data }) {
             )}
 
             {/* Dynamic Fields */}
-            {schema.fields.map(field => {
-                const value = data[field];
+            {schema.fields.map((field, index) => {
+                const fieldName = getFieldName(field);
+                if (!fieldName) return null;
+                const value = data[fieldName];
                 // Skip if main regime already shown manually (optional preference)
-                if (field === 'regime' || field === 'markov_state') return null;
+                if (fieldName === 'regime' || fieldName === 'markov_state') return null;
 
                 return (
-                    <div key={field} className="card flex flex-col gap-2">
+                    <div key={`${fieldName}-${index}`} className="card flex flex-col gap-2">
                         <div className="text-[11px] text-textMuted uppercase tracking-wider font-medium">
-                            {field.replace(/_/g, ' ')}
+                            {fieldName.replace(/_/g, ' ')}
                         </div>
                         <div className="text-2xl font-mono text-text font-medium">
-                            {formatValue(field, value)}
+                            {formatValue(fieldName, value)}
                         </div>
                         <div className="text-xs text-textSecondary">
-                            {getLabelForField(field, value) || '—'}
+                            {getLabelForField(fieldName, value) || '—'}
                         </div>
                     </div>
                 );
