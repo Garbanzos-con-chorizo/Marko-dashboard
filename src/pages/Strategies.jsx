@@ -90,8 +90,8 @@ export default function Strategies() {
                                     ? telemetryData.status.status
                                     : s.status,
 
-                            // Always take PnL from telemetry if available
-                            active_pnl: telemetryData.status.unrealizedPnL ?? s.active_pnl
+                            // Prefer instance pocket PnL from telemetry when selected; otherwise keep list value.
+                            active_pnl: telemetryData?.strategy?.pocket_pnl ?? s.active_pnl
                         }
                         : s;
 
@@ -102,6 +102,7 @@ export default function Strategies() {
                     const isRunning = rawStatus === 'RUNNING' || rawStatus === 'ACTIVE' || rawStatus === 'LIVE';
                     const isPaused = rawStatus === 'PAUSED';
                     const isActive = isRunning || isStarting || isPaused;
+                    const hasCredentialIssue = strategy.credentials_ok === false || rawStatus === 'CREDENTIALS_MISSING';
 
                     return (
                         <div
@@ -128,6 +129,11 @@ export default function Strategies() {
                                     <h3 className="text-sm font-bold text-text font-mono flex items-center gap-2">
                                         {strategy.id}
                                         {isSelected && <span className="text-[10px] bg-primary text-background px-1.5 py-0.5 rounded font-sans font-bold">ACTIVE</span>}
+                                        {hasCredentialIssue && (
+                                            <span className="text-[10px] bg-statusBad/20 text-statusBad px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1">
+                                                <AlertTriangle size={10} /> CREDS
+                                            </span>
+                                        )}
                                     </h3>
                                     <div className="flex items-center gap-2 text-xs text-textMuted mt-1 font-mono">
                                         <span className={`px-1 rounded text-[10px] font-bold ${(strategy.broker_type || 'PAPER') === 'LIVE'
@@ -145,26 +151,26 @@ export default function Strategies() {
 
                             {/* Status & PnL Wrapper */}
                             <div className="flex items-center gap-6 ml-auto sm:ml-0">
-                                {/* Status Badge */}
-                                <div className={`
+                            {/* Status Badge */}
+                            <div className={`
                                     flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono tracking-wider border
                                     ${isRunning
                                         ? 'bg-statusGood/10 text-statusGood border-statusGood/20'
                                         : isStarting
                                             ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                            : isError
-                                                ? 'bg-statusBad/10 text-statusBad border-statusBad/20'
-                                                : 'bg-textMuted/10 text-textMuted border-textMuted/20' // STOPPED / OFF
+                                        : isError
+                                            ? 'bg-statusBad/10 text-statusBad border-statusBad/20'
+                                        : 'bg-textMuted/10 text-textMuted border-textMuted/20' // STOPPED / OFF
                                     }
                                 `}>
-                                    <div className={`w-1.5 h-1.5 rounded-full 
+                                <div className={`w-1.5 h-1.5 rounded-full 
                                         ${isRunning ? 'bg-statusGood animate-pulse'
                                             : isStarting ? 'bg-amber-500 animate-pulse'
                                                 : isError ? 'bg-statusBad'
                                                     : 'bg-textMuted' /* STOPPED */
                                         }`}></div>
-                                    {strategy.status || 'STOPPED'}
-                                </div>
+                                {hasCredentialIssue ? 'CREDENTIALS_MISSING' : (strategy.status || 'STOPPED')}
+                            </div>
 
                                 {/* Active PnL (Pocket PnL) */}
                                 <div className="flex flex-col items-end min-w-[100px]">
