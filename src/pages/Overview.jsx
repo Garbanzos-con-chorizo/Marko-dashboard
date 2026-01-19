@@ -13,9 +13,7 @@ export default function Overview() {
         loading,
         refreshTelemetry,
         refreshChart,
-        lastUpdated,
-        barsLimit,
-        setBarsLimit
+        lastUpdated
     } = useTelemetry();
     const { strategies, selectedStrategyId, selectStrategy } = useStrategy();
 
@@ -75,6 +73,23 @@ export default function Overview() {
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
     const formatPercent = (val) => `${(val || 0).toFixed(2)}%`;
 
+    const pockets = telemetryData?.pockets || [];
+    const pocketTotals = useMemo(() => {
+        const totals = {
+            equity: 0,
+            unrealized: 0,
+            count: pockets.length
+        };
+        if (!pockets.length) {
+            return totals;
+        }
+        pockets.forEach((pocket) => {
+            totals.equity += Number(pocket.equity || 0);
+            totals.unrealized += Number(pocket.unrealized_pnl || 0);
+        });
+        return totals;
+    }, [pockets]);
+
     const normalizedStatus = (status.status || 'UNKNOWN').toUpperCase();
     const isRunning = normalizedStatus === 'RUNNING' || normalizedStatus === 'ACTIVE' || normalizedStatus === 'LIVE';
 
@@ -132,8 +147,14 @@ export default function Overview() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 <StatCard
                     label="Total Equity"
-                    value={formatCurrency(status.equity)}
-                    subValue="Real-time NAV"
+                    value={formatCurrency(pocketTotals.equity || status.equity)}
+                    subValue={pocketTotals.count ? 'Sum of pockets' : 'Real-time NAV'}
+                />
+                <StatCard
+                    label="Pocket PnL"
+                    value={formatCurrency(pocketTotals.unrealized)}
+                    status={pocketTotals.unrealized >= 0 ? 'good' : 'bad'}
+                    subValue={pocketTotals.count ? `${pocketTotals.count} pockets` : 'No pockets'}
                 />
                 <StatCard
                     label="Cash"
@@ -167,22 +188,6 @@ export default function Overview() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Chart takes up 2/3 */}
                 <div className="lg:col-span-2 space-y-4">
-                    <div className="flex items-center justify-between text-xs text-textMuted font-mono">
-                        <span>Market View</span>
-                        <div className="flex items-center gap-2">
-                            <span>Bars</span>
-                            <select
-                                value={barsLimit}
-                                onChange={(event) => setBarsLimit(Number(event.target.value))}
-                                className="bg-surface border border-border rounded px-2 py-1 text-xs text-text"
-                            >
-                                <option value={50}>50</option>
-                                <option value={100}>100</option>
-                                <option value={250}>250</option>
-                                <option value={500}>500</option>
-                            </select>
-                        </div>
-                    </div>
                     <div className="bg-surface border border-border rounded-lg p-1">
                         <PriceChart chartData={chartData} />
                     </div>
@@ -230,26 +235,6 @@ export default function Overview() {
                         )}
                     </div>
 
-                    {/* Portfolio Breakdown */}
-                    <div className="bg-surface border border-border rounded-lg p-5">
-                        <h3 className="text-xs text-textMuted mb-3 uppercase tracking-wider font-bold">Portfolio Breakdown</h3>
-                        {telemetryData.pockets?.length ? (
-                            <div className="space-y-2 text-xs font-mono">
-                                {telemetryData.pockets.map((pocket) => (
-                                    <div key={pocket.pocket_id} className="flex items-center justify-between">
-                                        <div className="text-text">{pocket.pocket_id}</div>
-                                        <div className="text-textSecondary">{formatCurrency(pocket.equity)}</div>
-                                        <div className={pocket.unrealized_pnl >= 0 ? 'text-statusGood' : 'text-statusBad'}>
-                                            {formatCurrency(pocket.unrealized_pnl)}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-xs text-textSecondary font-mono">No pocket data available.</div>
-                        )}
-                    </div>
-
                     {/* Quick Strategy Switcher (Compact) */}
                     {strategies.length > 1 && (
                         <div className="bg-surface border border-border rounded-lg p-4">
@@ -274,6 +259,31 @@ export default function Overview() {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* Portfolio Breakdown (Full Width) */}
+            <div className="bg-surface border border-border rounded-lg p-5">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs text-textMuted uppercase tracking-wider font-bold">Portfolio Breakdown</h3>
+                    <div className="text-[10px] text-textMuted font-mono">
+                        Total {formatCurrency(pocketTotals.equity || status.equity)}
+                    </div>
+                </div>
+                {pockets.length ? (
+                    <div className="space-y-2 text-xs font-mono">
+                        {pockets.map((pocket) => (
+                            <div key={pocket.pocket_id} className="flex items-center justify-between">
+                                <div className="text-text">{pocket.pocket_id}</div>
+                                <div className="text-textSecondary">{formatCurrency(pocket.equity)}</div>
+                                <div className={pocket.unrealized_pnl >= 0 ? 'text-statusGood' : 'text-statusBad'}>
+                                    {formatCurrency(pocket.unrealized_pnl)}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-xs text-textSecondary font-mono">No pocket data available.</div>
+                )}
             </div>
         </div>
     );
