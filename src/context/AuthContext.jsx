@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { userManager, oidcConfigValid } from '../auth/oidc';
-import { setAccessToken } from '../services/auth';
+import { setAccessToken, getAccessToken, isLocalToken, fetchLocalProfile } from '../services/auth';
 
 const AuthContext = createContext(null);
 
@@ -10,6 +10,22 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         let mounted = true;
+        const existingToken = getAccessToken();
+        const localToken = existingToken && isLocalToken(existingToken);
+
+        if (localToken) {
+            fetchLocalProfile().then(profile => {
+                if (!mounted) return;
+                setUser({ profile, access_token: existingToken, is_local: true });
+                setLoading(false);
+            }).catch(() => {
+                if (!mounted) return;
+                setAccessToken(null);
+                setUser(null);
+                setLoading(false);
+            });
+            return () => { mounted = false; };
+        }
         if (!oidcConfigValid || !userManager) {
             setUser(null);
             setAccessToken(null);
@@ -55,6 +71,11 @@ export function AuthProvider({ children }) {
         return null;
     };
     const logout = () => {
+        if (user?.is_local) {
+            setAccessToken(null);
+            setUser(null);
+            return null;
+        }
         if (userManager) {
             return userManager.signoutRedirect();
         }
