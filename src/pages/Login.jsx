@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { oidcConfigValid } from '../auth/oidc';
-import { loginLocal, registerLocal, setAccessToken } from '../services/auth';
+import { loginLocal, registerLocal, setAccessToken, useBackendOidcExchange } from '../services/auth';
 
 export default function Login() {
     const { login } = useAuth();
@@ -56,15 +56,15 @@ export default function Login() {
                         CREATE ACCOUNT
                     </button>
                 </div>
-                {!oidcConfigValid && (
+                {!oidcConfigValid && !useBackendOidcExchange() && (
                     <div className="p-3 mb-4 border border-statusBad/30 bg-statusBad/10 text-statusBad text-xs font-mono rounded">
                         Missing OIDC configuration. Set `VITE_OIDC_AUTHORITY` and `VITE_OIDC_CLIENT_ID`.
                     </div>
                 )}
                 <button
                     onClick={login}
-                    className={`w-full py-3 rounded font-bold transition-colors ${oidcConfigValid ? 'bg-primary text-background hover:bg-primary/90' : 'bg-border text-textMuted cursor-not-allowed'}`}
-                    disabled={!oidcConfigValid}
+                    className={`w-full py-3 rounded font-bold transition-colors ${(oidcConfigValid || useBackendOidcExchange()) ? 'bg-primary text-background hover:bg-primary/90' : 'bg-border text-textMuted cursor-not-allowed'}`}
+                    disabled={!(oidcConfigValid || useBackendOidcExchange())}
                 >
                     LOGIN WITH GOOGLE
                 </button>

@@ -1,6 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { userManager, oidcConfigValid } from '../auth/oidc';
-import { setAccessToken, getAccessToken, isLocalToken, fetchLocalProfile } from '../services/auth';
+import {
+    setAccessToken,
+    getAccessToken,
+    isLocalToken,
+    fetchLocalProfile,
+    startOidcLogin,
+    useBackendOidcExchange
+} from '../services/auth';
 
 const AuthContext = createContext(null);
 
@@ -65,6 +72,9 @@ export function AuthProvider({ children }) {
     }, []);
 
     const login = () => {
+        if (useBackendOidcExchange()) {
+            return startOidcLogin();
+        }
         if (userManager) {
             return userManager.signinRedirect();
         }

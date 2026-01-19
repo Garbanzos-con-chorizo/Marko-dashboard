@@ -1,12 +1,34 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userManager, oidcConfigValid } from '../auth/oidc';
+import { completeOidcLogin, setAccessToken, useBackendOidcExchange } from '../services/auth';
 
 export default function AuthCallback() {
     const navigate = useNavigate();
     const [error, setError] = useState(null);
 
     useEffect(() => {
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get('code');
+        const state = url.searchParams.get('state');
+
+        if (useBackendOidcExchange()) {
+            if (!code || !state) {
+                setError('Missing code or state in callback');
+                return;
+            }
+            completeOidcLogin(code, state)
+                .then(result => {
+                    setAccessToken(result.access_token);
+                    navigate('/overview', { replace: true });
+                })
+                .catch(err => {
+                    console.error('OIDC backend exchange failed:', err);
+                    setError(err?.message || String(err));
+                });
+            return;
+        }
+
         if (!oidcConfigValid || !userManager) {
             navigate('/', { replace: true });
             return;
