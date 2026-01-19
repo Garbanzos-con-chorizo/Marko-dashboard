@@ -157,6 +157,8 @@ function transformTelemetry(raw) {
       warmup_remaining_est: engineData?.warmup_remaining_seconds || 0,
       heartbeat: engineData?.last_heartbeat,
       equity: portfolioData?.total_equity || 0,
+      cash: portfolioData?.cash ?? 0,
+      exposurePct: portfolioData?.total_exposure_pct ?? 0,
       unrealizedPnL: portfolioData?.positions?.reduce((sum, pos) => sum + (pos.unrealized_pnl || 0), 0) || 0,
       openPositionsCount: portfolioData?.positions?.length || 0,
       lastAction: strategyData?.last_decision || 'WAIT',
@@ -179,6 +181,7 @@ function transformTelemetry(raw) {
       broker_type: strategyData?.broker_type || 'PAPER'
     },
     telemetry_schema: raw.telemetry_schema || null,
+    portfolio: portfolioData || {},
     positions: (portfolioData?.positions || []).map(pos => ({
       symbol: pos.symbol,
       size: pos.qty,

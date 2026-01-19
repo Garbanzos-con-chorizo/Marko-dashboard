@@ -7,7 +7,16 @@ import { Link } from 'react-router-dom';
 import { Settings, Activity } from 'lucide-react';
 
 export default function Overview() {
-    const { data: telemetryData, chartData, loading, refreshTelemetry, refreshChart } = useTelemetry();
+    const {
+        data: telemetryData,
+        chartData,
+        loading,
+        refreshTelemetry,
+        refreshChart,
+        lastUpdated,
+        barsLimit,
+        setBarsLimit
+    } = useTelemetry();
     const { strategies, selectedStrategyId, selectStrategy } = useStrategy();
 
     // Derived state for the "Current View"
@@ -64,6 +73,7 @@ export default function Overview() {
     if (!status) return null; // Should be handled by loading state, but defensive
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
+    const formatPercent = (val) => `${(val || 0).toFixed(2)}%`;
 
     const normalizedStatus = (status.status || 'UNKNOWN').toUpperCase();
     const isRunning = normalizedStatus === 'RUNNING' || normalizedStatus === 'ACTIVE' || normalizedStatus === 'LIVE';
@@ -97,24 +107,49 @@ export default function Overview() {
                 </div>
 
                 {/* Status Pill */}
-                <div className={`px-4 py-1.5 rounded-full text-xs font-bold font-mono border flex items-center gap-2 ${statusClasses}`}>
-                    <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-current animate-pulse' : 'bg-current'}`} />
-                    {status.status}
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            refreshTelemetry();
+                            refreshChart();
+                        }}
+                        className="px-3 py-1.5 text-xs font-mono rounded border border-border text-textSecondary hover:text-text hover:border-text transition-colors"
+                    >
+                        Refresh
+                    </button>
+                    <div className="text-[10px] text-textMuted font-mono">
+                        Updated {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : '--:--:--'}
+                    </div>
+                    <div className={`px-4 py-1.5 rounded-full text-xs font-bold font-mono border flex items-center gap-2 ${statusClasses}`}>
+                        <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-current animate-pulse' : 'bg-current'}`} />
+                        {status.status}
+                    </div>
                 </div>
             </div>
 
             {/* Key Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 <StatCard
                     label="Total Equity"
                     value={formatCurrency(status.equity)}
                     subValue="Real-time NAV"
                 />
                 <StatCard
+                    label="Cash"
+                    value={formatCurrency(status.cash)}
+                    subValue="Available Balance"
+                />
+                <StatCard
                     label="Unrealized PnL"
                     value={formatCurrency(status.unrealizedPnL)}
                     status={status.unrealizedPnL >= 0 ? 'good' : 'bad'}
                     subValue={status.unrealizedPnL >= 0 ? '+ Profit' : '- Loss'}
+                />
+                <StatCard
+                    label="Exposure"
+                    value={formatPercent((status.exposurePct || 0) * 100)}
+                    subValue="Portfolio Risk"
                 />
                 <StatCard
                     label="Open Positions"
@@ -132,8 +167,44 @@ export default function Overview() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Chart takes up 2/3 */}
                 <div className="lg:col-span-2 space-y-4">
+                    <div className="flex items-center justify-between text-xs text-textMuted font-mono">
+                        <span>Market View</span>
+                        <div className="flex items-center gap-2">
+                            <span>Bars</span>
+                            <select
+                                value={barsLimit}
+                                onChange={(event) => setBarsLimit(Number(event.target.value))}
+                                className="bg-surface border border-border rounded px-2 py-1 text-xs text-text"
+                            >
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                                <option value={250}>250</option>
+                                <option value={500}>500</option>
+                            </select>
+                        </div>
+                    </div>
                     <div className="bg-surface border border-border rounded-lg p-1">
                         <PriceChart chartData={chartData} />
+                    </div>
+                    <div className="bg-surface border border-border rounded-lg p-5">
+                        <h3 className="text-xs text-textMuted mb-3 uppercase tracking-wider font-bold">Positions Snapshot</h3>
+                        {telemetryData.positions?.length ? (
+                            <div className="space-y-2 text-xs font-mono">
+                                {telemetryData.positions.slice(0, 5).map((pos) => (
+                                    <div key={pos.symbol} className="flex items-center justify-between">
+                                        <div className="text-text">{pos.symbol}</div>
+                                        <div className="text-textSecondary">
+                                            {pos.size} @ {formatCurrency(pos.currentPrice)}
+                                        </div>
+                                        <div className={pos.unrealizedPnL >= 0 ? 'text-statusGood' : 'text-statusBad'}>
+                                            {formatCurrency(pos.unrealizedPnL)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-xs text-textSecondary font-mono">No open positions.</div>
+                        )}
                     </div>
                 </div>
 
@@ -156,6 +227,26 @@ export default function Overview() {
                                     <span className="text-text">{telemetryData.strategy.phi?.toFixed(2) ?? '-'}</span>
                                 </div>
                             </div>
+                        )}
+                    </div>
+
+                    {/* Portfolio Breakdown */}
+                    <div className="bg-surface border border-border rounded-lg p-5">
+                        <h3 className="text-xs text-textMuted mb-3 uppercase tracking-wider font-bold">Portfolio Breakdown</h3>
+                        {telemetryData.pockets?.length ? (
+                            <div className="space-y-2 text-xs font-mono">
+                                {telemetryData.pockets.map((pocket) => (
+                                    <div key={pocket.pocket_id} className="flex items-center justify-between">
+                                        <div className="text-text">{pocket.pocket_id}</div>
+                                        <div className="text-textSecondary">{formatCurrency(pocket.equity)}</div>
+                                        <div className={pocket.unrealized_pnl >= 0 ? 'text-statusGood' : 'text-statusBad'}>
+                                            {formatCurrency(pocket.unrealized_pnl)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-xs text-textSecondary font-mono">No pocket data available.</div>
                         )}
                     </div>
 
