@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { userManager } from '../auth/oidc';
+import { userManager, oidcConfigValid } from '../auth/oidc';
 import { setAccessToken } from '../services/auth';
 
 const AuthContext = createContext(null);
@@ -10,6 +10,13 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         let mounted = true;
+        if (!oidcConfigValid || !userManager) {
+            setUser(null);
+            setAccessToken(null);
+            setLoading(false);
+            return () => { mounted = false; };
+        }
+
         userManager.getUser().then(currentUser => {
             if (!mounted) return;
             setUser(currentUser || null);
@@ -41,8 +48,18 @@ export function AuthProvider({ children }) {
         };
     }, []);
 
-    const login = () => userManager.signinRedirect();
-    const logout = () => userManager.signoutRedirect();
+    const login = () => {
+        if (userManager) {
+            return userManager.signinRedirect();
+        }
+        return null;
+    };
+    const logout = () => {
+        if (userManager) {
+            return userManager.signoutRedirect();
+        }
+        return null;
+    };
 
     const value = useMemo(() => ({
         user,

@@ -1,11 +1,15 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { userManager } from '../auth/oidc';
+import { userManager, oidcConfigValid } from '../auth/oidc';
 
 export default function AuthCallback() {
     const navigate = useNavigate();
 
     useEffect(() => {
+        if (!oidcConfigValid || !userManager) {
+            navigate('/', { replace: true });
+            return;
+        }
         userManager.signinRedirectCallback()
             .then(() => navigate('/overview', { replace: true }))
             .catch(() => navigate('/', { replace: true }));

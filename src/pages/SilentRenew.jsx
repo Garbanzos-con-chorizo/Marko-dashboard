@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
-import { userManager } from '../auth/oidc';
+import { userManager, oidcConfigValid } from '../auth/oidc';
 
 export default function SilentRenew() {
     useEffect(() => {
+        if (!oidcConfigValid || !userManager) {
+            return;
+        }
         userManager.signinSilentCallback().catch(() => {
             // Silent renew errors are handled by the OIDC client.
         });

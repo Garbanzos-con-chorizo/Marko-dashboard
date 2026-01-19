@@ -8,7 +8,9 @@ const silentRedirectUri = import.meta.env.VITE_OIDC_SILENT_REDIRECT_URI || `${wi
 const scope = import.meta.env.VITE_OIDC_SCOPE || 'openid profile email';
 const responseType = import.meta.env.VITE_OIDC_RESPONSE_TYPE || 'code';
 
-export const userManager = new UserManager({
+export const oidcConfigValid = Boolean(authority && clientId);
+
+export const userManager = oidcConfigValid ? new UserManager({
     authority,
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -18,4 +20,4 @@ export const userManager = new UserManager({
     scope,
     automaticSilentRenew: true,
     userStore: new WebStorageStateStore({ store: window.localStorage })
-});
+}) : null;

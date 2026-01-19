@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext';
+import { oidcConfigValid } from '../auth/oidc';
 
 export default function Login() {
     const { login } = useAuth();
@@ -10,9 +11,15 @@ export default function Login() {
                 <p className="text-sm text-textSecondary mb-6">
                     Authenticate with your configured identity provider to access the trading console.
                 </p>
+                {!oidcConfigValid && (
+                    <div className="p-3 mb-4 border border-statusBad/30 bg-statusBad/10 text-statusBad text-xs font-mono rounded">
+                        Missing OIDC configuration. Set `VITE_OIDC_AUTHORITY` and `VITE_OIDC_CLIENT_ID`.
+                    </div>
+                )}
                 <button
                     onClick={login}
-                    className="w-full py-3 bg-primary text-background rounded font-bold hover:bg-primary/90 transition-colors"
+                    className={`w-full py-3 rounded font-bold transition-colors ${oidcConfigValid ? 'bg-primary text-background hover:bg-primary/90' : 'bg-border text-textMuted cursor-not-allowed'}`}
+                    disabled={!oidcConfigValid}
                 >
                     LOGIN WITH OIDC
                 </button>
