@@ -60,7 +60,7 @@ export default function Strategies() {
 
             <header className="flex items-center justify-between border-b border-border pb-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-text mb-1">STRATEGY FLEET</h1>
+                    <h1 className="text-2xl font-bold text-text mb-1">FLEET</h1>
                     <p className="text-sm font-mono text-textMuted">MANAGE ACTIVE ALGORITHMIC INSTANCES</p>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1 bg-surfaceHighlight rounded text-xs font-mono text-textSecondary">

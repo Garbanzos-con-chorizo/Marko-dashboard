@@ -101,9 +101,9 @@ export default function Layout({ children }) {
 
                 {/* Navigation */}
                 <nav className="flex-1 py-4 flex flex-col gap-1 overflow-y-auto overflow-x-hidden">
-                    <SidebarLink to="/strategies" label="STRATEGIES" icon={Globe} isCollapsed={isCollapsed} />
-                    <SidebarLink to="/marketplace" label="MARKETPLACE" icon={Package} isCollapsed={isCollapsed} />
                     <SidebarLink to="/overview" label="OVERVIEW" icon={LayoutDashboard} isCollapsed={isCollapsed} />
+                    <SidebarLink to="/strategies" label="FLEET" icon={Globe} isCollapsed={isCollapsed} />
+                    <SidebarLink to="/marketplace" label="MARKETPLACE" icon={Package} isCollapsed={isCollapsed} />
                     <SidebarLink to="/strategy" label="STRATEGY" icon={Cpu} isCollapsed={isCollapsed} />
                     <SidebarLink to="/positions" label="POSITIONS" icon={Layers} isCollapsed={isCollapsed} />
                     <SidebarLink to="/events" label="EVENTS / LOGS" icon={ScrollText} isCollapsed={isCollapsed} />
