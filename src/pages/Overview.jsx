@@ -47,6 +47,20 @@ export default function Overview() {
         });
         return totals;
     }, [pockets]);
+    const pocketPnlValue = pocketTotals.count
+        ? pocketTotals.unrealized
+        : (telemetryData?.strategy?.pocket_pnl ?? status.unrealizedPnL ?? 0);
+    const exposureFromStatus = status.exposurePct;
+    const exposureFromPortfolio = telemetryData?.portfolio?.total_exposure_pct;
+    const exposureFromPositions = (() => {
+        const equity = status.equity || 0;
+        if (!equity || !telemetryData?.positions?.length) {
+            return 0;
+        }
+        const marketValue = telemetryData.positions.reduce((sum, pos) => sum + (pos.marketValue || 0), 0);
+        return marketValue / equity;
+    })();
+    const exposureValue = exposureFromStatus ?? exposureFromPortfolio ?? exposureFromPositions;
 
     // Loading state handling
     if (loading && !telemetryData?.status) {
@@ -152,9 +166,9 @@ export default function Overview() {
                 />
                 <StatCard
                     label="Pocket PnL"
-                    value={formatCurrency(pocketTotals.unrealized)}
-                    status={pocketTotals.unrealized >= 0 ? 'good' : 'bad'}
-                    subValue={pocketTotals.count ? `${pocketTotals.count} pockets` : 'No pockets'}
+                    value={formatCurrency(pocketPnlValue)}
+                    status={pocketPnlValue >= 0 ? 'good' : 'bad'}
+                    subValue={pocketTotals.count ? `${pocketTotals.count} pockets` : 'Selected strategy'}
                 />
                 <StatCard
                     label="Cash"
@@ -169,7 +183,7 @@ export default function Overview() {
                 />
                 <StatCard
                     label="Exposure"
-                    value={formatPercent((status.exposurePct || 0) * 100)}
+                    value={formatPercent((exposureValue || 0) * 100)}
                     subValue="Portfolio Risk"
                 />
                 <StatCard
