@@ -51,7 +51,7 @@ export default function Overview() {
     const pocketPnlValue = pocketTotals.count
         ? pocketTotals.unrealized
         : (telemetryData?.strategy?.pocket_pnl ?? status?.unrealizedPnL ?? 0);
-    const exposureFromStatus = status.exposurePct;
+    const exposureFromStatus = status?.exposurePct;
     const exposureFromPortfolio = telemetryData?.portfolio?.total_exposure_pct;
     const exposureFromPositions = (() => {
         const equity = status.equity || 0;
