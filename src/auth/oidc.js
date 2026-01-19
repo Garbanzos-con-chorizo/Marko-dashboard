@@ -19,5 +19,6 @@ export const userManager = oidcConfigValid ? new UserManager({
     response_type: responseType,
     scope,
     automaticSilentRenew: true,
-    userStore: new WebStorageStateStore({ store: window.localStorage })
+    userStore: new WebStorageStateStore({ store: window.localStorage }),
+    stateStore: new WebStorageStateStore({ store: window.localStorage })
 }) : null;
