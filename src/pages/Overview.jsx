@@ -31,6 +31,7 @@ export default function Overview() {
         refreshChart();
     }, [selectedStrategyId]); // Re-fetch if selection changes
 
+    const { status } = telemetryData || {};
     const pockets = telemetryData?.pockets || [];
     const pocketTotals = useMemo(() => {
         const totals = {
@@ -49,7 +50,7 @@ export default function Overview() {
     }, [pockets]);
     const pocketPnlValue = pocketTotals.count
         ? pocketTotals.unrealized
-        : (telemetryData?.strategy?.pocket_pnl ?? status.unrealizedPnL ?? 0);
+        : (telemetryData?.strategy?.pocket_pnl ?? status?.unrealizedPnL ?? 0);
     const exposureFromStatus = status.exposurePct;
     const exposureFromPortfolio = telemetryData?.portfolio?.total_exposure_pct;
     const exposureFromPositions = (() => {
@@ -98,7 +99,6 @@ export default function Overview() {
 
     // Telemetry Data (V2 Structure)
     // The TelemetryContext already normalizes V1/V2 differences into `telemetryData`.
-    const { status } = telemetryData || {};
     if (!status) return null; // Should be handled by loading state, but defensive
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
