@@ -1,9 +1,11 @@
 
+import { getAuthHeaders } from './auth';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const IS_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
-async function installStrategy(repositoryUrl, version = 'main') {
+async function installStrategy(repositoryUrl, version = 'main', visibility = 'PUBLIC', gitToken = null) {
     if (IS_MOCK) {
         console.log(`[MOCK] Installing strategy from ${repositoryUrl} @ ${version}`);
         await new Promise(r => setTimeout(r, 1000));
@@ -14,11 +16,14 @@ async function installStrategy(repositoryUrl, version = 'main') {
         const response = await fetch(`${API_BASE_URL}/api/v2/admin/strategies/install`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
             },
             body: JSON.stringify({
                 repository_url: repositoryUrl,
-                version: version
+                version: version,
+                visibility: visibility,
+                git_token: gitToken || undefined
             })
         });
 
@@ -45,7 +50,8 @@ async function createInstance(strategyId, config) {
         const response = await fetch(`${API_BASE_URL}/api/v2/admin/instances`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
             },
             body: JSON.stringify({
                 strategy_id: strategyId,
@@ -80,7 +86,8 @@ async function deleteInstance(instanceId) {
         const response = await fetch(`${API_BASE_URL}/api/v2/admin/instances/${instanceId}`, {
             method: 'DELETE',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
             }
         });
 

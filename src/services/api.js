@@ -1,3 +1,5 @@
+import { getAuthHeaders } from './auth';
+
 const MOCK_DELAY = 500;
 const IS_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
@@ -209,7 +211,7 @@ async function fetchTelemetry(strategyId = null) {
     : `${API_BASE_URL}/api/v1/telemetry`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: { ...getAuthHeaders() } });
     if (!response.ok) {
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
@@ -295,7 +297,7 @@ async function fetchChartData(strategyId = null, limit = 100) {
   url += `?limit=${limit}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: { ...getAuthHeaders() } });
     if (!response.ok) {
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
@@ -338,7 +340,7 @@ async function fetchStrategies() {
   // Reverted to /api/v2/strategies because /admin/instances returned 405 Method Not Allowed
   const url = `${API_BASE_URL}/api/v2/strategies`;
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: { ...getAuthHeaders() } });
     if (!response.ok) {
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
@@ -369,7 +371,7 @@ async function controlStrategy(id, action) {
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ action })
     });
     if (!response.ok) {
@@ -461,7 +463,7 @@ async function fetchSystemLogs(params = {}) {
   const url = `${API_BASE_URL}/api/v1/events?${query.toString()}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: { ...getAuthHeaders() } });
     if (!response.ok) {
       // Fallback for V1 legacy if V1 events endpoint doesn't support filtering yet?
       // Assuming backend spec is implemented.

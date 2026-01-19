@@ -1,4 +1,6 @@
 
+import { getAuthHeaders } from './auth';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // In-memory cache
@@ -23,7 +25,7 @@ async function getStrategyDefinitions(forceRefresh = false) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/v2/catalog/strategies`, {
             method: 'GET',
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json', ...getAuthHeaders() }
         });
 
         if (!response.ok) {
@@ -53,7 +55,7 @@ async function getTelemetrySchema(id) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/v2/catalog/strategies/${id}/schema`, {
             method: 'GET',
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json', ...getAuthHeaders() }
         });
 
         if (!response.ok) {
@@ -79,7 +81,7 @@ async function getStrategyReadme(id) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/v2/catalog/strategies/${id}/readme`, {
             method: 'GET',
-            headers: { 'Accept': 'text/markdown, text/plain' }
+            headers: { 'Accept': 'text/markdown, text/plain', ...getAuthHeaders() }
         });
 
         if (response.status === 404) return null;

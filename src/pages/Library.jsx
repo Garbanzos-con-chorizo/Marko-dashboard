@@ -1,30 +1,28 @@
 import React, { useState } from 'react';
 import { useStrategyCatalog } from '../context/StrategyCatalogContext';
 import { adminService } from '../services/adminService';
-import { Package, Download, GitBranch, Terminal, AlertCircle, Search, Info, Plus } from 'lucide-react';
+import { Package, Download, GitBranch, Terminal, AlertCircle, Search, Info, Plus, BookOpen } from 'lucide-react';
 import ConfigureInstanceModal from '../components/ConfigureInstanceModal';
 import StrategyDetailsModal from '../components/StrategyDetailsModal';
 
-export default function Marketplace() {
+export default function Library() {
     const { strategies, loading, error: catalogError } = useStrategyCatalog();
     const [installModalOpen, setInstallModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // UI State
-    const [selectedStrategy, setSelectedStrategy] = useState(null); // For config modal
-    const [detailsStrategy, setDetailsStrategy] = useState(null); // For details modal
+    const [selectedStrategy, setSelectedStrategy] = useState(null);
+    const [detailsStrategy, setDetailsStrategy] = useState(null);
     const [toastMessage, setToastMessage] = useState(null);
 
-    // Install State
     const [repoUrl, setRepoUrl] = useState('');
     const [version, setVersion] = useState('main');
-    const [visibility, setVisibility] = useState('PUBLIC');
+    const [visibility, setVisibility] = useState('PRIVATE');
     const [gitToken, setGitToken] = useState('');
     const [isInstalling, setIsInstalling] = useState(false);
-    const [installStatus, setInstallStatus] = useState(null); // { type: 'success' | 'error', message: '' }
+    const [installStatus, setInstallStatus] = useState(null);
 
-    const publicStrategies = strategies.filter(s => (s.visibility || 'PUBLIC') === 'PUBLIC');
-    const filteredStrategies = publicStrategies.filter(s =>
+    const privateStrategies = strategies.filter(s => (s.visibility || 'PUBLIC') === 'PRIVATE');
+    const filteredStrategies = privateStrategies.filter(s =>
         String(s.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         String(s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         String(s.display_name || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -39,12 +37,11 @@ export default function Marketplace() {
 
         try {
             await adminService.installStrategy(repoUrl, version, visibility, gitToken);
-            setInstallStatus({ type: 'success', message: 'Strategy installed successfully! It is now available in the catalog.' });
+            setInstallStatus({ type: 'success', message: 'Strategy installed successfully! It is now available in your library.' });
             setRepoUrl('');
             setVersion('main');
-            setVisibility('PUBLIC');
+            setVisibility('PRIVATE');
             setGitToken('');
-            // Ideally we would trigger a catalog refresh here, but for now we rely on the user or auto-refresh
         } catch (err) {
             setInstallStatus({ type: 'error', message: err.message || 'Installation failed.' });
         } finally {
@@ -60,14 +57,13 @@ export default function Marketplace() {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-full text-textMuted font-mono animate-pulse">
-                LOADING CATALOG...
+                LOADING LIBRARY...
             </div>
         );
     }
 
     return (
         <div className="space-y-6 relative">
-            {/* Success Toast */}
             {toastMessage && (
                 <div className="fixed top-20 right-8 z-50 p-4 bg-statusGood/10 border border-statusGood/20 backdrop-blur-md rounded shadow-lg text-statusGood flex items-center gap-3 animate-slideIn">
                     <Info size={20} />
@@ -78,10 +74,10 @@ export default function Marketplace() {
             <header className="flex items-center justify-between border-b border-border pb-4">
                 <div>
                     <h1 className="text-2xl font-bold text-text mb-1 flex items-center gap-2">
-                        <Package className="text-primary" size={24} />
-                        STRATEGY MARKETPLACE
+                        <BookOpen className="text-primary" size={24} />
+                        STRATEGY LIBRARY
                     </h1>
-                    <p className="text-sm font-mono text-textMuted">BROWSE AND INSTALL ALGORITHMIC STRATEGIES</p>
+                    <p className="text-sm font-mono text-textMuted">PRIVATE STRATEGIES ONLY</p>
                 </div>
                 <button
                     onClick={() => setInstallModalOpen(true)}
@@ -92,7 +88,6 @@ export default function Marketplace() {
                 </button>
             </header>
 
-            {/* Verification / Status Banner */}
             {catalogError && (
                 <div className="p-4 bg-statusBad/10 border border-statusBad/20 rounded text-statusBad flex items-center gap-3">
                     <AlertCircle size={20} />
@@ -100,23 +95,20 @@ export default function Marketplace() {
                 </div>
             )}
 
-            {/* Search Bar */}
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted" size={16} />
                 <input
                     type="text"
-                    placeholder="Search available strategies..."
+                    placeholder="Search private strategies..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm font-mono text-text placeholder:text-textMuted/50"
                 />
             </div>
 
-            {/* Strategies Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredStrategies.map((strategy) => (
                     <div key={strategy.id} className="bg-surface border border-border p-5 rounded-lg hover:border-borderHighlight transition-colors group relative overflow-hidden">
-                        {/* Decorative Top Line */}
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
                         <div className="flex items-start justify-between mb-4">
@@ -165,26 +157,25 @@ export default function Marketplace() {
 
                 {filteredStrategies.length === 0 && (
                     <div className="col-span-full py-12 text-center text-textMuted border-2 border-dashed border-border rounded-lg">
-                        <p className="font-mono mb-2">NO STRATEGIES FOUND</p>
-                        <p className="text-sm">Try adjusting your search or install a new strategy.</p>
+                        <p className="font-mono mb-2">NO PRIVATE STRATEGIES FOUND</p>
+                        <p className="text-sm">Install a private strategy or switch to Marketplace.</p>
                     </div>
                 )}
             </div>
 
-            {/* Install Modal */}
             {installModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                     <div className="bg-surface border border-border rounded-lg shadow-2xl w-full max-w-lg overflow-hidden">
                         <header className="px-6 py-4 border-b border-border flex items-center justify-between bg-surfaceHighlight/30">
                             <h2 className="text-lg font-bold text-text flex items-center gap-2">
                                 <Download size={18} className="text-primary" />
-                                INSTALL STRATEGY PACKAGE
+                                INSTALL PRIVATE STRATEGY
                             </h2>
                             <button
                                 onClick={() => setInstallModalOpen(false)}
                                 className="text-textMuted hover:text-text transition-colors"
                             >
-                                ✕
+                                âœ•
                             </button>
                         </header>
 
@@ -233,8 +224,8 @@ export default function Marketplace() {
                                     className="w-full p-3 bg-background border border-border rounded focus:outline-none focus:border-primary text-sm font-mono"
                                     disabled={isInstalling}
                                 >
-                                    <option value="PUBLIC">PUBLIC (MARKETPLACE)</option>
                                     <option value="PRIVATE">PRIVATE (LIBRARY)</option>
+                                    <option value="PUBLIC">PUBLIC (MARKETPLACE)</option>
                                 </select>
                             </div>
 
@@ -286,7 +277,7 @@ export default function Marketplace() {
                     </div>
                 </div>
             )}
-            {/* Configure Instance Modal */}
+
             {selectedStrategy && (
                 <ConfigureInstanceModal
                     strategy={selectedStrategy}
@@ -295,7 +286,6 @@ export default function Marketplace() {
                 />
             )}
 
-            {/* Strategy Details Modal */}
             {detailsStrategy && (
                 <StrategyDetailsModal
                     strategy={detailsStrategy}

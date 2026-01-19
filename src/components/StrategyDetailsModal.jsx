@@ -60,7 +60,7 @@ export default function StrategyDetailsModal({ strategy, onClose }) {
                             <Package size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-text mb-0.5">{strategy.name || strategy.id}</h2>
+                            <h2 className="text-xl font-bold text-text mb-0.5">{strategy.display_name || strategy.name || strategy.id}</h2>
                             <p className="text-xs font-mono text-textMuted tracking-widest uppercase">
                                 DEFINITION ID: {strategy.id} • {strategy.version || 'v1.0.0'}
                             </p>

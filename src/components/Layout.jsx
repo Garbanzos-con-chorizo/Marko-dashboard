@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 import { useStrategy } from '../context/StrategyContext';
+import { useAuth } from '../context/AuthContext';
 import { NavLink } from 'react-router-dom';
 import StrategySelector from './StrategySelector';
 import {
@@ -12,7 +13,10 @@ import {
     ChevronRight,
     Activity,
     Globe,
-    Package
+    Package,
+    BookOpen,
+    HelpCircle,
+    LogOut
 } from 'lucide-react';
 
 // eslint-disable-next-line no-unused-vars
@@ -42,6 +46,7 @@ const SidebarLink = ({ to, label, icon: Icon, isCollapsed }) => (
 export default function Layout({ children }) {
     const { lastUpdated, error } = useTelemetry();
     const { strategies, selectedStrategyId, selectStrategy } = useStrategy();
+    const { user, logout } = useAuth();
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     // Auto-collapse on mobile devices on mount
@@ -104,15 +109,26 @@ export default function Layout({ children }) {
                     <SidebarLink to="/overview" label="OVERVIEW" icon={LayoutDashboard} isCollapsed={isCollapsed} />
                     <SidebarLink to="/strategies" label="FLEET" icon={Globe} isCollapsed={isCollapsed} />
                     <SidebarLink to="/marketplace" label="MARKETPLACE" icon={Package} isCollapsed={isCollapsed} />
+                    <SidebarLink to="/library" label="LIBRARY" icon={BookOpen} isCollapsed={isCollapsed} />
                     <SidebarLink to="/strategy" label="STRATEGY" icon={Cpu} isCollapsed={isCollapsed} />
                     <SidebarLink to="/positions" label="POSITIONS" icon={Layers} isCollapsed={isCollapsed} />
                     <SidebarLink to="/events" label="EVENTS / LOGS" icon={ScrollText} isCollapsed={isCollapsed} />
+                    <SidebarLink to="/help" label="HELP" icon={HelpCircle} isCollapsed={isCollapsed} />
                 </nav>
 
                 {/* Footer / Status */}
                 <div className="p-3 border-t border-border bg-surface text-[10px]">
                     {!isCollapsed ? (
                         <>
+                            {user && (
+                                <button
+                                    onClick={logout}
+                                    className="mb-3 w-full text-xs font-bold text-textSecondary hover:text-text border border-border rounded px-2 py-1 flex items-center justify-center gap-2"
+                                >
+                                    <LogOut size={12} />
+                                    SIGN OUT
+                                </button>
+                            )}
                             <div className="text-textMuted mb-1 font-medium">STATUS</div>
                             {error ? (
                                 <div className="flex items-center gap-2 text-statusBad font-medium">
