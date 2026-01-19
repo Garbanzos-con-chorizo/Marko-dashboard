@@ -54,7 +54,7 @@ export default function Overview() {
     const exposureFromStatus = status?.exposurePct;
     const exposureFromPortfolio = telemetryData?.portfolio?.total_exposure_pct;
     const exposureFromPositions = (() => {
-        const equity = status.equity || 0;
+        const equity = status?.equity || 0;
         if (!equity || !telemetryData?.positions?.length) {
             return 0;
         }
