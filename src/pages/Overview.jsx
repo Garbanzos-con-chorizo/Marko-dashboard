@@ -31,6 +31,23 @@ export default function Overview() {
         refreshChart();
     }, [selectedStrategyId]); // Re-fetch if selection changes
 
+    const pockets = telemetryData?.pockets || [];
+    const pocketTotals = useMemo(() => {
+        const totals = {
+            equity: 0,
+            unrealized: 0,
+            count: pockets.length
+        };
+        if (!pockets.length) {
+            return totals;
+        }
+        pockets.forEach((pocket) => {
+            totals.equity += Number(pocket.equity || 0);
+            totals.unrealized += Number(pocket.unrealized_pnl || 0);
+        });
+        return totals;
+    }, [pockets]);
+
     // Loading state handling
     if (loading && !telemetryData?.status) {
         return (
@@ -72,23 +89,6 @@ export default function Overview() {
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
     const formatPercent = (val) => `${(val || 0).toFixed(2)}%`;
-
-    const pockets = telemetryData?.pockets || [];
-    const pocketTotals = useMemo(() => {
-        const totals = {
-            equity: 0,
-            unrealized: 0,
-            count: pockets.length
-        };
-        if (!pockets.length) {
-            return totals;
-        }
-        pockets.forEach((pocket) => {
-            totals.equity += Number(pocket.equity || 0);
-            totals.unrealized += Number(pocket.unrealized_pnl || 0);
-        });
-        return totals;
-    }, [pockets]);
 
     const normalizedStatus = (status.status || 'UNKNOWN').toUpperCase();
     const isRunning = normalizedStatus === 'RUNNING' || normalizedStatus === 'ACTIVE' || normalizedStatus === 'LIVE';
