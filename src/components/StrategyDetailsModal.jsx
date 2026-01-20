@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useStrategyCatalog } from '../context/StrategyCatalogContext';
+import { useAuth } from '../context/AuthContext';
+import { adminService } from '../services/adminService';
 import { Package, GitBranch, Terminal, Shield, List, Settings, Info, Loader2, BookOpen, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 export default function StrategyDetailsModal({ strategy, onClose }) {
     const { fetchSchema, fetchReadme } = useStrategyCatalog();
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'docs'
     const [schema, setSchema] = useState(null);
     const [readme, setReadme] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [visibility, setVisibility] = useState(strategy.visibility || 'PUBLIC');
+    const [visibilityStatus, setVisibilityStatus] = useState(null);
+    const [updatingVisibility, setUpdatingVisibility] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -31,6 +37,27 @@ export default function StrategyDetailsModal({ strategy, onClose }) {
         loadData();
         return () => { isMounted = false; };
     }, [strategy.id, fetchSchema, fetchReadme]);
+
+    useEffect(() => {
+        setVisibility(strategy.visibility || 'PUBLIC');
+    }, [strategy.visibility]);
+
+    const userId = user?.profile?.user_id;
+    const userRole = user?.profile?.role;
+    const canEditVisibility = Boolean(userId && (userRole === 'ADMIN' || strategy.owner_user_id === userId));
+
+    const handleVisibilityUpdate = async () => {
+        setUpdatingVisibility(true);
+        setVisibilityStatus(null);
+        try {
+            await adminService.updateStrategyVisibility(strategy.id, visibility);
+            setVisibilityStatus({ type: 'success', message: 'Visibility updated.' });
+        } catch (err) {
+            setVisibilityStatus({ type: 'error', message: err.message || 'Update failed.' });
+        } finally {
+            setUpdatingVisibility(false);
+        }
+    };
 
     // Custom Components for Markdown Rendering styling
     const MarkdownComponents = {
@@ -105,6 +132,40 @@ export default function StrategyDetailsModal({ strategy, onClose }) {
                                         <p className="text-textSecondary text-sm leading-relaxed mb-6">
                                             {strategy.description || 'This strategy has no extended description provided. It is a custom logic package registered in the catalog.'}
                                         </p>
+
+                                        {canEditVisibility && (
+                                            <div className="mb-6 p-4 bg-background border border-border rounded-lg">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <span className="text-[10px] text-textMuted uppercase font-bold">Visibility</span>
+                                                    <span className="text-xs font-mono text-textMuted">
+                                                        Current: {strategy.visibility || 'PUBLIC'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <select
+                                                        value={visibility}
+                                                        onChange={(e) => setVisibility(e.target.value)}
+                                                        className="flex-1 p-2 bg-surface border border-border rounded text-sm font-mono"
+                                                        disabled={updatingVisibility}
+                                                    >
+                                                        <option value="PUBLIC">PUBLIC (MARKETPLACE)</option>
+                                                        <option value="PRIVATE">PRIVATE (LIBRARY)</option>
+                                                    </select>
+                                                    <button
+                                                        onClick={handleVisibilityUpdate}
+                                                        disabled={updatingVisibility}
+                                                        className="px-3 py-2 text-xs font-bold bg-primary/10 text-primary border border-primary/20 rounded hover:bg-primary hover:text-background transition-colors"
+                                                    >
+                                                        {updatingVisibility ? 'SAVING...' : 'UPDATE'}
+                                                    </button>
+                                                </div>
+                                                {visibilityStatus && (
+                                                    <div className={`mt-2 text-xs ${visibilityStatus.type === 'success' ? 'text-statusGood' : 'text-statusBad'}`}>
+                                                        {visibilityStatus.message}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="p-4 bg-background border border-border rounded-lg">

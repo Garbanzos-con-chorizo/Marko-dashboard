@@ -103,9 +103,38 @@ async function deleteInstance(instanceId) {
     }
 }
 
+async function updateStrategyVisibility(strategyId, visibility) {
+    if (IS_MOCK) {
+        console.log(`[MOCK] Updating visibility for ${strategyId} -> ${visibility}`);
+        await new Promise(r => setTimeout(r, 500));
+        return { success: true, visibility };
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v2/admin/strategies/${strategyId}/visibility`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify({ visibility })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Update Failed: ${response.status} - ${errorText}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to update strategy visibility:', error);
+        throw error;
+    }
+}
 
 export const adminService = {
     installStrategy,
     createInstance,
-    deleteInstance
+    deleteInstance,
+    updateStrategyVisibility
 };
