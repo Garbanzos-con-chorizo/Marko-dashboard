@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
         const syncFromToken = async (token) => {
             const localToken = token && isLocalToken(token);
-            const maxAttempts = 8;
+            const maxAttempts = token ? 8 : 1;
             const reloadOnce = () => {
                 if (!token) return false;
                 if (sessionStorage.getItem('marko_auth_reload')) {
