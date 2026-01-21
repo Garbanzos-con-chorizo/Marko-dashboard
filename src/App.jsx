@@ -5,6 +5,7 @@ import { StrategyProvider } from './context/StrategyContext';
 import { TelemetryProvider } from './context/TelemetryContext';
 import { StrategyCatalogProvider } from './context/StrategyCatalogContext'; // Phase 1 Integration
 import { api } from './services/api'; // Import api service
+import { getAccessToken } from './services/auth';
 import Layout from './components/Layout';
 import Overview from './pages/Overview';
 import Strategies from './pages/Strategies';
@@ -50,6 +51,13 @@ const AuthGate = () => {
   }
 
   if (!user) {
+    if (getAccessToken()) {
+      return (
+        <div className="min-h-screen flex items-center justify-center text-textMuted font-mono">
+          AUTHENTICATING...
+        </div>
+      );
+    }
     return <Login />;
   }
 

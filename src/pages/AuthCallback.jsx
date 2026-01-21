@@ -20,7 +20,7 @@ export default function AuthCallback() {
             completeOidcLogin(code, state)
                 .then(result => {
                     setAccessToken(result.access_token);
-                    navigate('/overview', { replace: true });
+                    window.location.replace('/overview');
                 })
                 .catch(err => {
                     console.error('OIDC backend exchange failed:', err);
@@ -34,7 +34,11 @@ export default function AuthCallback() {
             return;
         }
         userManager.signinRedirectCallback()
-            .then(() => navigate('/overview', { replace: true }))
+            .then(async (user) => {
+                const currentUser = user || await userManager.getUser();
+                setAccessToken(currentUser?.access_token || null);
+                window.location.replace('/overview');
+            })
             .catch((err) => {
                 console.error('OIDC callback failed:', err);
                 setError(err?.message || String(err));

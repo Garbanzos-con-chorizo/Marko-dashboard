@@ -6,6 +6,18 @@ const OIDC_REDIRECT_URI = import.meta.env.VITE_OIDC_REDIRECT_URI || '';
 const OIDC_SCOPE = import.meta.env.VITE_OIDC_SCOPE || 'openid profile email';
 const OIDC_BACKEND_EXCHANGE = import.meta.env.VITE_OIDC_BACKEND_EXCHANGE === 'true';
 
+const authListeners = new Set();
+
+function notifyAuthChange(token) {
+    authListeners.forEach((listener) => {
+        try {
+            listener(token);
+        } catch (err) {
+            console.warn('Auth listener failed', err);
+        }
+    });
+}
+
 export function useBackendOidcExchange() {
     return OIDC_BACKEND_EXCHANGE;
 }
@@ -15,11 +27,21 @@ export function getAccessToken() {
 }
 
 export function setAccessToken(token) {
+    const current = getAccessToken();
+    if (token === current) {
+        return;
+    }
     if (token) {
         localStorage.setItem(TOKEN_STORAGE_KEY, token);
     } else {
         localStorage.removeItem(TOKEN_STORAGE_KEY);
     }
+    notifyAuthChange(token || null);
+}
+
+export function onAuthChange(listener) {
+    authListeners.add(listener);
+    return () => authListeners.delete(listener);
 }
 
 export function getAuthHeaders() {

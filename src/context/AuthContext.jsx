@@ -6,7 +6,8 @@ import {
     isLocalToken,
     fetchLocalProfile,
     startOidcLogin,
-    useBackendOidcExchange
+    useBackendOidcExchange,
+    onAuthChange
 } from '../services/auth';
 
 const AuthContext = createContext(null);
@@ -17,40 +18,86 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         let mounted = true;
-        const existingToken = getAccessToken();
-        const localToken = existingToken && isLocalToken(existingToken);
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        const syncFromToken = async (token) => {
+            const localToken = token && isLocalToken(token);
+            const maxAttempts = 8;
+            const reloadOnce = () => {
+                if (!token) return false;
+                if (sessionStorage.getItem('marko_auth_reload')) {
+                    return false;
+                }
+                sessionStorage.setItem('marko_auth_reload', '1');
+                window.location.reload();
+                return true;
+            };
 
-        if (localToken) {
-            fetchLocalProfile().then(profile => {
+            if (localToken) {
+                let profile = null;
+                for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+                    try {
+                        profile = await fetchLocalProfile();
+                        break;
+                    } catch {
+                        await sleep(500 * (attempt + 1));
+                    }
+                }
                 if (!mounted) return;
-                setUser({ profile, access_token: existingToken, is_local: true });
-                setLoading(false);
-            }).catch(() => {
-                if (!mounted) return;
+                if (profile) {
+                    setUser({ profile, access_token: token, is_local: true });
+                    sessionStorage.removeItem('marko_auth_reload');
+                    setLoading(false);
+                    return;
+                }
+                if (reloadOnce()) {
+                    return;
+                }
                 setAccessToken(null);
                 setUser(null);
                 setLoading(false);
-            });
-            return () => { mounted = false; };
-        }
-        if (!oidcConfigValid || !userManager) {
-            setUser(null);
-            setAccessToken(null);
-            setLoading(false);
-            return () => { mounted = false; };
-        }
+                return;
+            }
 
-        userManager.getUser().then(currentUser => {
+            if (!oidcConfigValid || !userManager) {
+                if (!mounted) return;
+                setUser(null);
+                setAccessToken(null);
+                setLoading(false);
+                return;
+            }
+
+            if (token) {
+                setUser(prev => prev || { access_token: token });
+            }
+
+            let currentUser = null;
+            for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+                try {
+                    currentUser = await userManager.getUser();
+                } catch {
+                    currentUser = null;
+                }
+                if (currentUser) break;
+                await sleep(500 * (attempt + 1));
+            }
             if (!mounted) return;
-            setUser(currentUser || null);
-            setAccessToken(currentUser?.access_token || null);
+            if (currentUser) {
+                setUser(currentUser);
+            } else if (!token) {
+                setUser(null);
+            }
+            if (currentUser?.access_token) {
+                setAccessToken(currentUser.access_token);
+                sessionStorage.removeItem('marko_auth_reload');
+            }
+            if (!currentUser && !token) {
+                if (reloadOnce()) {
+                    return;
+                }
+                setAccessToken(null);
+            }
             setLoading(false);
-        }).catch(() => {
-            if (!mounted) return;
-            setUser(null);
-            setAccessToken(null);
-            setLoading(false);
-        });
+        };
 
         const onUserLoaded = loadedUser => {
             setUser(loadedUser);
@@ -61,13 +108,26 @@ export function AuthProvider({ children }) {
             setAccessToken(null);
         };
 
-        userManager.events.addUserLoaded(onUserLoaded);
-        userManager.events.addUserUnloaded(onUserUnloaded);
+        if (userManager) {
+            userManager.events.addUserLoaded(onUserLoaded);
+            userManager.events.addUserUnloaded(onUserUnloaded);
+        }
+
+        const unsubscribe = onAuthChange((token) => {
+            if (!mounted) return;
+            setLoading(true);
+            syncFromToken(token);
+        });
+
+        syncFromToken(getAccessToken());
 
         return () => {
             mounted = false;
-            userManager.events.removeUserLoaded(onUserLoaded);
-            userManager.events.removeUserUnloaded(onUserUnloaded);
+            if (userManager) {
+                userManager.events.removeUserLoaded(onUserLoaded);
+                userManager.events.removeUserUnloaded(onUserUnloaded);
+            }
+            unsubscribe();
         };
     }, []);
 
