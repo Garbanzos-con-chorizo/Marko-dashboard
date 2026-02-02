@@ -80,8 +80,7 @@ export const TelemetryProvider = ({ children }) => {
                 setError(err.message || 'Failed to fetch telemetry');
             }
         } finally {
-            if (isMounted.current) {
-                // Only unset loading if we have some data or error
+            if (isMounted.current && (telemetry?.status || error)) {
                 setLoading(false);
             }
         }
@@ -119,18 +118,11 @@ export const TelemetryProvider = ({ children }) => {
     // Effect to handle strategy changes, limit changes, and polling
     useEffect(() => {
         isMounted.current = true;
-        setLoading(true); // Show loading when switching strategies or limits
-        setTelemetry({
-            status: null,
-            strategy: null,
-            positions: [],
-            events: [],
-        });
-        setChartData(null);
+        // Show loading when switching strategies or limits, but keep last data to avoid blanks
+        setLoading(true);
         setSelectedChartSymbol(null);
         setError(null);
         setChartError(null);
-        setLastUpdated(null);
 
         // Use a faster poll interval for telemetry (e.g., 5s) instead of 14m
         const pollInterval = 5000;
