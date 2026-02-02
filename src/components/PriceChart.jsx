@@ -4,6 +4,19 @@ import { useTelemetry } from '../context/TelemetryContext';
 export default function PriceChart({ chartData }) {
     const canvasRef = useRef(null);
     const { barsLimit, setBarsLimit, selectedChartSymbol, setSelectedChartSymbol } = useTelemetry();
+    const commonSymbols = [
+        'BTC/USD',
+        'ETH/USD',
+        'SOL/USD',
+        'BNB/USD',
+        'XRP/USD',
+        'ADA/USD',
+        'DOGE/USD',
+        'AVAX/USD',
+        'MATIC/USD',
+        'LTC/USD',
+        'LINK/USD'
+    ];
 
     useEffect(() => {
         if (!chartData || !Array.isArray(chartData.bars) || chartData.bars.length === 0) {
@@ -244,17 +257,31 @@ export default function PriceChart({ chartData }) {
                     <span className="px-1.5 py-0.5 bg-surfaceHighlight rounded text-[10px] text-primary font-mono">
                         {chartData.timeframe || '1H'}
                     </span>
-                    {Array.isArray(chartData.available_symbols) && chartData.available_symbols.length > 1 && (
-                        <select
-                            value={selectedChartSymbol || chartData.symbol}
+                    <div className="flex items-center gap-2">
+                        <input
+                            list="marko-chart-symbols"
+                            value={selectedChartSymbol || chartData.symbol || ''}
                             onChange={(e) => setSelectedChartSymbol(e.target.value)}
-                            className="bg-surfaceHighlight border border-border text-text text-[10px] font-mono px-2 py-1 rounded"
-                        >
-                            {chartData.available_symbols.map((sym) => (
-                                <option key={sym} value={sym}>{sym}</option>
+                            placeholder="Symbol"
+                            className="bg-surfaceHighlight border border-border text-text text-[10px] font-mono px-2 py-1 rounded w-[140px]"
+                        />
+                        <datalist id="marko-chart-symbols">
+                            {(Array.isArray(chartData.available_symbols) ? chartData.available_symbols : []).map((sym) => (
+                                <option key={`avail-${sym}`} value={sym} />
                             ))}
-                        </select>
-                    )}
+                            {commonSymbols.map((sym) => (
+                                <option key={`common-${sym}`} value={sym} />
+                            ))}
+                        </datalist>
+                        {(selectedChartSymbol && selectedChartSymbol !== chartData.symbol) && (
+                            <button
+                                onClick={() => setSelectedChartSymbol(chartData.symbol)}
+                                className="text-[10px] font-mono text-textMuted hover:text-text"
+                            >
+                                Reset
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-3">

@@ -50,6 +50,11 @@ const generateTelemetry = (strategyId = 'legacy') => {
   // Mock PnL for pocket
   const mockPocketPnL = isWarmingUp ? 0 : (isEth ? -320.10 : 1250.50);
 
+  const pockets = portfolioData?.pockets || [];
+  const pocketUnrealized = pockets.reduce((sum, p) => sum + Number(p.unrealized_pnl || 0), 0);
+  const pocketRealized = pockets.reduce((sum, p) => sum + Number(p.realized_pnl || 0), 0);
+  const totalPocketPnl = pocketUnrealized + pocketRealized;
+
   return {
     timestamp: new Date().toISOString(),
     version: "2.0",
@@ -161,7 +166,7 @@ function transformTelemetry(raw) {
       equity: portfolioData?.total_equity || 0,
       cash: portfolioData?.cash ?? 0,
       exposurePct: portfolioData?.total_exposure_pct ?? 0,
-      unrealizedPnL: portfolioData?.positions?.reduce((sum, pos) => sum + (pos.unrealized_pnl || 0), 0) || 0,
+      unrealizedPnL: pockets.length ? totalPocketPnl : (portfolioData?.positions?.reduce((sum, pos) => sum + (pos.unrealized_pnl || 0), 0) || 0),
       openPositionsCount: portfolioData?.positions?.length || 0,
       lastAction: strategyData?.last_decision || 'WAIT',
       instanceId: raw.instance_id || raw.id // Capture V2 instance ID
@@ -193,7 +198,7 @@ function transformTelemetry(raw) {
       marketValue: pos.market_value
     })),
     // NEW: Pockets (Strategy Breakdown)
-    pockets: portfolioData?.pockets || [],
+    pockets,
     events: raw.events || []
   };
 }
