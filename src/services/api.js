@@ -155,6 +155,14 @@ function transformTelemetry(raw) {
     engineStatus = 'RUNNING';
   }
 
+  const positions = portfolioData?.positions || [];
+  const marketValueSum = positions.reduce((sum, pos) => sum + (pos.market_value || 0), 0);
+  const equityRaw = portfolioData?.total_equity ?? 0;
+  const cashRaw = portfolioData?.cash ?? 0;
+  const computedEquity = equityRaw || (cashRaw + marketValueSum);
+  const exposureRaw = portfolioData?.total_exposure_pct ?? 0;
+  const exposureComputed = computedEquity > 0 ? (marketValueSum / computedEquity) : 0;
+
   return {
     status: {
       status: engineStatus,
@@ -162,9 +170,9 @@ function transformTelemetry(raw) {
       warmup_progress: engineData?.warmup_progress || 0,
       warmup_remaining_est: engineData?.warmup_remaining_seconds || 0,
       heartbeat: engineData?.last_heartbeat,
-      equity: portfolioData?.total_equity || 0,
-      cash: portfolioData?.cash ?? 0,
-      exposurePct: portfolioData?.total_exposure_pct ?? 0,
+      equity: computedEquity || 0,
+      cash: cashRaw,
+      exposurePct: exposureRaw || exposureComputed,
       unrealizedPnL: pockets.length ? totalPocketPnl : (portfolioData?.positions?.reduce((sum, pos) => sum + (pos.unrealized_pnl || 0), 0) || 0),
       openPositionsCount: portfolioData?.positions?.length || 0,
       lastAction: strategyData?.last_decision || 'WAIT',
