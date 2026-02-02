@@ -50,11 +50,6 @@ const generateTelemetry = (strategyId = 'legacy') => {
   // Mock PnL for pocket
   const mockPocketPnL = isWarmingUp ? 0 : (isEth ? -320.10 : 1250.50);
 
-  const pockets = portfolioData?.pockets || [];
-  const pocketUnrealized = pockets.reduce((sum, p) => sum + Number(p.unrealized_pnl || 0), 0);
-  const pocketRealized = pockets.reduce((sum, p) => sum + Number(p.realized_pnl || 0), 0);
-  const totalPocketPnl = pocketUnrealized + pocketRealized;
-
   return {
     timestamp: new Date().toISOString(),
     version: "2.0",
@@ -131,6 +126,10 @@ function transformTelemetry(raw) {
   let strategyData = raw.strategy;
   let engineData = raw.engine;
   let portfolioData = raw.portfolio;
+  const pockets = portfolioData?.pockets || [];
+  const pocketUnrealized = pockets.reduce((sum, p) => sum + Number(p.unrealized_pnl || 0), 0);
+  const pocketRealized = pockets.reduce((sum, p) => sum + Number(p.realized_pnl || 0), 0);
+  const totalPocketPnl = pocketUnrealized + pocketRealized;
 
   // Detect V2 flat response (just strategy state fields at root level)
   if (!strategyData && (raw.markov_state !== undefined || raw.phi !== undefined)) {
