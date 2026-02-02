@@ -24,6 +24,10 @@ export const TelemetryProvider = ({ children }) => {
     });
     const [chartData, setChartData] = useState(null);
     const [selectedChartSymbol, setSelectedChartSymbol] = useState(null);
+    const chartSymbolRef = useRef(selectedChartSymbol);
+    useEffect(() => {
+        chartSymbolRef.current = selectedChartSymbol;
+    }, [selectedChartSymbol]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [chartError, setChartError] = useState(null);
@@ -81,7 +85,7 @@ export const TelemetryProvider = ({ children }) => {
             const currentId = strategyIdRef.current;
 
             // Pass currentId and limit to api
-            const data = await api.getChartData(currentId, barsLimit, selectedChartSymbol);
+            const data = await api.getChartData(currentId, barsLimit, chartSymbolRef.current);
             if (isMounted.current) {
                 setChartData(data);
                 setChartError(null);
@@ -131,7 +135,7 @@ export const TelemetryProvider = ({ children }) => {
         return () => {
             clearInterval(intervalId);
         };
-    }, [selectedStrategyId, barsLimit, selectedChartSymbol]);
+    }, [selectedStrategyId, barsLimit]);
 
     // Proper cleanup on unmount
     useEffect(() => {
