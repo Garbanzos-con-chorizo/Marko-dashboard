@@ -268,6 +268,7 @@ const generateChartData = (strategyId = 'legacy', limit = 100) => {
   return {
     symbol: symbol,
     timeframe: '1h', // Could vary this based on ID parsing
+    available_symbols: [symbol],
     bars,
     overlays: {
       entries,
@@ -281,7 +282,7 @@ const generateChartData = (strategyId = 'legacy', limit = 100) => {
   };
 };
 
-async function fetchChartData(strategyId = null, limit = 100) {
+async function fetchChartData(strategyId = null, limit = 100, symbol = null) {
   if (IS_MOCK) {
     await sleep(MOCK_DELAY);
     return generateChartData(strategyId || 'legacy', limit);
@@ -293,8 +294,13 @@ async function fetchChartData(strategyId = null, limit = 100) {
     ? `${API_BASE_URL}/api/v2/strategies/${strategyId}/chart`
     : `${API_BASE_URL}/api/chart`;
 
-  // Append limit query param
-  url += `?limit=${limit}`;
+  // Append query params
+  const params = new URLSearchParams();
+  params.append('limit', limit);
+  if (symbol) {
+    params.append('symbol', symbol);
+  }
+  url += `?${params.toString()}`;
 
   try {
     const response = await fetch(url, { headers: { ...getAuthHeaders() } });

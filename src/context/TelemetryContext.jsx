@@ -23,6 +23,7 @@ export const TelemetryProvider = ({ children }) => {
         events: [],
     });
     const [chartData, setChartData] = useState(null);
+    const [selectedChartSymbol, setSelectedChartSymbol] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [chartError, setChartError] = useState(null);
@@ -80,10 +81,15 @@ export const TelemetryProvider = ({ children }) => {
             const currentId = strategyIdRef.current;
 
             // Pass currentId and limit to api
-            const data = await api.getChartData(currentId, barsLimit);
+            const data = await api.getChartData(currentId, barsLimit, selectedChartSymbol);
             if (isMounted.current) {
                 setChartData(data);
                 setChartError(null);
+                if (data?.available_symbols && Array.isArray(data.available_symbols)) {
+                    if (!selectedChartSymbol || !data.available_symbols.includes(selectedChartSymbol)) {
+                        setSelectedChartSymbol(data.symbol || data.available_symbols[0] || null);
+                    }
+                }
             }
         } catch (err) {
             if (isMounted.current) {
@@ -97,6 +103,17 @@ export const TelemetryProvider = ({ children }) => {
     useEffect(() => {
         isMounted.current = true;
         setLoading(true); // Show loading when switching strategies or limits
+        setTelemetry({
+            status: null,
+            strategy: null,
+            positions: [],
+            events: [],
+        });
+        setChartData(null);
+        setSelectedChartSymbol(null);
+        setError(null);
+        setChartError(null);
+        setLastUpdated(null);
 
         // Use a faster poll interval for telemetry (e.g., 5s) instead of 14m
         const pollInterval = 5000;
@@ -114,7 +131,7 @@ export const TelemetryProvider = ({ children }) => {
         return () => {
             clearInterval(intervalId);
         };
-    }, [selectedStrategyId, barsLimit]);
+    }, [selectedStrategyId, barsLimit, selectedChartSymbol]);
 
     // Proper cleanup on unmount
     useEffect(() => {
@@ -132,7 +149,9 @@ export const TelemetryProvider = ({ children }) => {
         refreshTelemetry: fetchTelemetryData,
         refreshChart: fetchChartDataManual,
         barsLimit,
-        setBarsLimit
+        setBarsLimit,
+        selectedChartSymbol,
+        setSelectedChartSymbol
     };
 
     return (

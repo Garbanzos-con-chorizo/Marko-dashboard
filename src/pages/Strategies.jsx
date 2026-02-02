@@ -72,6 +72,8 @@ export default function Strategies() {
             <div className="grid gap-3">
                 {strategies.map((s) => {
                     const isSelected = s.id === selectedStrategyId;
+                    const telemetryInstanceId = telemetryData?.status?.instanceId;
+                    const isTelemetryFresh = isSelected && telemetryInstanceId === s.id;
 
                     // High-fidelity synchronization for selected strategy
                     // CRITICAL FIX: If the fleet list says the strategy is STOPPED, REMOVED, or ERROR, 
@@ -79,7 +81,7 @@ export default function Strategies() {
                     const listStatus = (s.status || '').toUpperCase();
                     const isListStopped = listStatus === 'STOPPED' || listStatus === 'REMOVED' || listStatus === 'ERROR' || listStatus === 'CRASHED';
 
-                    const strategy = isSelected && telemetryData?.status
+                    const strategy = isTelemetryFresh && telemetryData?.status
                         ? {
                             ...s,
                             // Only allow telemetry to upgrade the status if the list thinks we are active/starting.
