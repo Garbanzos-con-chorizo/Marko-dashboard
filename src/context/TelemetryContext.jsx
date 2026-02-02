@@ -32,6 +32,9 @@ export const TelemetryProvider = ({ children }) => {
     const [error, setError] = useState(null);
     const [chartError, setChartError] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
+    const lastTelemetryFetchRef = useRef(0);
+    const lastChartFetchRef = useRef(0);
+    const minFetchIntervalMs = 2000;
 
     // Default to 100 bars
     const [barsLimit, setBarsLimit] = useState(100);
@@ -42,6 +45,11 @@ export const TelemetryProvider = ({ children }) => {
     // Fetch functions exposed for manual refresh
     const fetchTelemetryData = async () => {
         try {
+            const now = Date.now();
+            if (now - lastTelemetryFetchRef.current < minFetchIntervalMs) {
+                return;
+            }
+            lastTelemetryFetchRef.current = now;
             // Always use the freshest ID from the Ref
             const currentId = strategyIdRef.current;
             // console.log('[TelemetryContext] Polling Telemetry for ID:', currentId);
@@ -81,6 +89,11 @@ export const TelemetryProvider = ({ children }) => {
 
     const fetchChartDataManual = async () => {
         try {
+            const now = Date.now();
+            if (now - lastChartFetchRef.current < minFetchIntervalMs) {
+                return;
+            }
+            lastChartFetchRef.current = now;
             // Always use the freshest ID from the Ref
             const currentId = strategyIdRef.current;
 
