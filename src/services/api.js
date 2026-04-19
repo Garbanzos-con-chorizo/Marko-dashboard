@@ -210,9 +210,10 @@ function transformTelemetry(raw) {
   };
 }
 
-async function fetchTelemetry(strategyId = null) {
+async function fetchTelemetry(strategyId = null, { signal } = {}) {
   if (IS_MOCK) {
     await sleep(MOCK_DELAY);
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     return transformTelemetry(generateTelemetry(strategyId || 'legacy'));
   }
 
@@ -223,7 +224,7 @@ async function fetchTelemetry(strategyId = null) {
     : `${API_BASE_URL}/api/v1/telemetry`;
 
   try {
-    const response = await fetch(url, { headers: { ...getAuthHeaders() } });
+    const response = await fetch(url, { headers: { ...getAuthHeaders() }, signal });
     if (!response.ok) {
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
@@ -234,7 +235,10 @@ async function fetchTelemetry(strategyId = null) {
     }
     return transformTelemetry(raw);
   } catch (error) {
-    console.error(`Fetch failed for ${url}:`, error);
+    // Don't spam the console with expected aborts on unmount / strategy switch
+    if (error?.name !== 'AbortError') {
+      console.error(`Fetch failed for ${url}:`, error);
+    }
     throw error;
   }
 }
@@ -294,9 +298,10 @@ const generateChartData = (strategyId = 'legacy', limit = 100) => {
   };
 };
 
-async function fetchChartData(strategyId = null, limit = 100, symbol = null) {
+async function fetchChartData(strategyId = null, limit = 100, symbol = null, { signal } = {}) {
   if (IS_MOCK) {
     await sleep(MOCK_DELAY);
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     return generateChartData(strategyId || 'legacy', limit);
   }
 
@@ -315,7 +320,7 @@ async function fetchChartData(strategyId = null, limit = 100, symbol = null) {
   url += `?${params.toString()}`;
 
   try {
-    const response = await fetch(url, { headers: { ...getAuthHeaders() } });
+    const response = await fetch(url, { headers: { ...getAuthHeaders() }, signal });
     if (!response.ok) {
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
@@ -342,7 +347,9 @@ async function fetchChartData(strategyId = null, limit = 100, symbol = null) {
 
     return data;
   } catch (error) {
-    console.error(`Fetch failed for ${url}:`, error);
+    if (error?.name !== 'AbortError') {
+      console.error(`Fetch failed for ${url}:`, error);
+    }
     throw error;
   }
 }

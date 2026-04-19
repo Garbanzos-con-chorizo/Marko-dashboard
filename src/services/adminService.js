@@ -5,9 +5,15 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const IS_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
-async function installStrategy(repositoryUrl, version = 'main', visibility = 'PUBLIC', gitToken = null) {
+async function installStrategy(
+    repositoryUrl,
+    version = 'main',
+    visibility = 'PUBLIC',
+    gitToken = null,
+    useRiskManager = true,
+) {
     if (IS_MOCK) {
-        console.log(`[MOCK] Installing strategy from ${repositoryUrl} @ ${version}`);
+        console.log(`[MOCK] Installing strategy from ${repositoryUrl} @ ${version} (risk_manager=${useRiskManager})`);
         await new Promise(r => setTimeout(r, 1000));
         return { success: true, message: 'Strategy installed successfully (MOCK)' };
     }
@@ -23,7 +29,8 @@ async function installStrategy(repositoryUrl, version = 'main', visibility = 'PU
                 repository_url: repositoryUrl,
                 version: version,
                 visibility: visibility,
-                git_token: gitToken || undefined
+                git_token: gitToken || undefined,
+                use_risk_manager: useRiskManager,
             })
         });
 
