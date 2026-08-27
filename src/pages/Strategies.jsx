@@ -117,6 +117,10 @@ export default function Strategies() {
                     const isPaused = rawStatus === 'PAUSED';
                     const isActive = isRunning || isStarting || isPaused;
                     const hasCredentialIssue = strategy.credentials_ok === false || rawStatus === 'CREDENTIALS_MISSING';
+                    const hasStaleFeed = strategy.feed_stale === true;
+                    const staleFeedHours = strategy.seconds_since_last_bar
+                        ? (strategy.seconds_since_last_bar / 3600).toFixed(1)
+                        : null;
 
                     return (
                         <div
@@ -146,6 +150,14 @@ export default function Strategies() {
                                         {hasCredentialIssue && (
                                             <span className="text-[10px] bg-statusBad/20 text-statusBad px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1">
                                                 <AlertTriangle size={10} /> CREDS
+                                            </span>
+                                        )}
+                                        {hasStaleFeed && !hasCredentialIssue && (
+                                            <span
+                                                className="text-[10px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1"
+                                                title={staleFeedHours ? `No new bar in ${staleFeedHours}h — strategy has stopped generating signals` : 'Market data feed is stale'}
+                                            >
+                                                <AlertTriangle size={10} /> STALE FEED
                                             </span>
                                         )}
                                     </h3>
