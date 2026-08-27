@@ -110,6 +110,40 @@ async function deleteInstance(instanceId) {
     }
 }
 
+async function updateInstanceCredentials(instanceId, brokerConfig) {
+    if (IS_MOCK) {
+        console.log(`[MOCK] Updating credentials for ${instanceId}`, brokerConfig);
+        await new Promise(r => setTimeout(r, 800));
+        return { status: 'updated', message: 'Credentials updated (MOCK).' };
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v2/admin/instances/${instanceId}/credentials`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify({
+                broker: brokerConfig.broker,
+                mode: brokerConfig.mode,
+                api_key: brokerConfig.api_key,
+                api_secret: brokerConfig.api_secret
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Update Failed: ${response.status} - ${errorText}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to update instance credentials:', error);
+        throw error;
+    }
+}
+
 async function updateStrategyVisibility(strategyId, visibility) {
     if (IS_MOCK) {
         console.log(`[MOCK] Updating visibility for ${strategyId} -> ${visibility}`);
@@ -143,5 +177,6 @@ export const adminService = {
     installStrategy,
     createInstance,
     deleteInstance,
+    updateInstanceCredentials,
     updateStrategyVisibility
 };

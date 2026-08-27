@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useStrategy } from '../context/StrategyContext';
 import { useTelemetry } from '../context/TelemetryContext';
 import { adminService } from '../services/adminService';
-import { Play, Square, Pause, Activity, TrendingUp, TrendingDown, Trash2, AlertTriangle, X, CheckCircle } from 'lucide-react';
+import { Play, Square, Pause, Activity, TrendingUp, TrendingDown, Trash2, AlertTriangle, X, CheckCircle, Key } from 'lucide-react';
+import EditCredentialsModal from '../components/EditCredentialsModal';
 
 export default function Strategies() {
     const { strategies, selectedStrategyId, selectStrategy, controlStrategy, refreshStrategies, loading } = useStrategy();
@@ -11,6 +12,7 @@ export default function Strategies() {
     const [deleteTarget, setDeleteTarget] = useState(null); // { id, symbol, status }
     const [isDeleting, setIsDeleting] = useState(false);
     const [toast, setToast] = useState(null); // { message, type }
+    const [credentialsTarget, setCredentialsTarget] = useState(null); // strategy object
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
@@ -25,6 +27,16 @@ export default function Strategies() {
     const handleDeleteClick = (e, strategy) => {
         e.stopPropagation();
         setDeleteTarget(strategy);
+    };
+
+    const handleEditCredentialsClick = (e, strategy) => {
+        e.stopPropagation();
+        setCredentialsTarget(strategy);
+    };
+
+    const handleCredentialsUpdated = () => {
+        showToast(`Credentials updated for ${credentialsTarget?.id}. Refreshing broker connection...`, 'success');
+        refreshStrategies();
     };
 
     const confirmDelete = async () => {
@@ -216,6 +228,14 @@ export default function Strategies() {
                                 )}
 
                                 <button
+                                    onClick={(e) => handleEditCredentialsClick(e, strategy)}
+                                    className="p-2 rounded hover:bg-primary/20 hover:text-primary text-textMuted transition-colors ml-1"
+                                    title="Edit Broker Credentials"
+                                >
+                                    <Key size={16} />
+                                </button>
+
+                                <button
                                     onClick={(e) => handleDeleteClick(e, strategy)}
                                     className="p-2 rounded hover:bg-statusBad/20 hover:text-statusBad text-textMuted transition-colors ml-1"
                                     title="Delete Instance"
@@ -292,6 +312,15 @@ export default function Strategies() {
                         </footer>
                     </div>
                 </div>
+            )}
+
+            {/* Edit Credentials Modal */}
+            {credentialsTarget && (
+                <EditCredentialsModal
+                    instance={credentialsTarget}
+                    onClose={() => setCredentialsTarget(null)}
+                    onSuccess={handleCredentialsUpdated}
+                />
             )}
         </div>
     );
