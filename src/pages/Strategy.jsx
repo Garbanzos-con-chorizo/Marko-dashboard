@@ -4,11 +4,39 @@ import { useStrategy } from '../context/StrategyContext';
 import { useStrategyCatalog } from '../context/StrategyCatalogContext';
 import StatCard from '../components/StatCard';
 import SchemaMetrics from '../components/SchemaMetrics'; // Import Schema Metrics
-import { AlertCircle, Loader } from 'lucide-react';
+import { AlertCircle, Loader, ShieldAlert, ShieldCheck, RotateCcw } from 'lucide-react';
+
+// Human labels for the risk limits the engine reports. Order matters: it is
+// the order they are displayed in.
+const RISK_LIMIT_LABELS = [
+    ['max_order_pct_equity', 'Max order / equity', (v) => `${(v * 100).toFixed(0)}%`],
+    ['max_order_notional', 'Max order notional', (v) => `$${Number(v).toLocaleString()}`],
+    ['max_position_pct_equity', 'Max position / equity', (v) => `${(v * 100).toFixed(0)}%`],
+    ['max_position_notional', 'Max position notional', (v) => `$${Number(v).toLocaleString()}`],
+    ['max_gross_exposure', 'Max gross exposure', (v) => `${Number(v).toFixed(2)}x`],
+    ['daily_loss_limit_pct', 'Daily loss kill switch', (v) => `${(v * 100).toFixed(1)}%`],
+    ['daily_loss_limit_abs', 'Daily loss (absolute)', (v) => `$${Number(v).toLocaleString()}`],
+    ['max_orders_per_minute', 'Orders / minute', (v) => `${v}`],
+];
 
 export default function Strategy() {
     const { data, refreshTelemetry, error, loading } = useTelemetry();
-    const { strategies, selectedStrategyId } = useStrategy();
+    const { strategies, selectedStrategyId, controlStrategy } = useStrategy();
+    const [resetting, setResetting] = useState(false);
+    const risk = data?.risk || null;
+    const riskLimits = data?.risk_limits || null;
+    const killSwitchTripped = risk?.tripped === true;
+
+    const handleResetKillSwitch = async () => {
+        if (!selectedStrategyId) return;
+        setResetting(true);
+        try {
+            await controlStrategy(selectedStrategyId, 'reset_kill_switch');
+            setTimeout(() => refreshTelemetry(), 500);
+        } finally {
+            setResetting(false);
+        }
+    };
     const { fetchSchema, strategies: catalogDefinitions } = useStrategyCatalog();
     const [currentSchema, setCurrentSchema] = useState(null);
 
@@ -106,8 +134,6 @@ export default function Strategy() {
         regime,
         phi, // Fallback fields
         volatility,
-        risk_multiplier,
-        conviction_score,
         filters,
         last_decision
     } = strategy;
@@ -170,6 +196,73 @@ export default function Strategy() {
                     </div>
                 </div>
             )}
+
+            {/* Risk layer: kill-switch state and the limits in force. */}
+            <div className={`card mt-4 border ${killSwitchTripped ? 'border-statusBad/40' : 'border-border'}`}>
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm text-textMuted uppercase tracking-wider flex items-center gap-2">
+                        {killSwitchTripped
+                            ? <ShieldAlert size={16} className="text-statusBad" />
+                            : <ShieldCheck size={16} className="text-statusGood" />}
+                        Risk Layer
+                    </h3>
+                    {killSwitchTripped && (
+                        <button
+                            onClick={handleResetKillSwitch}
+                            disabled={resetting}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded bg-statusBad/10 text-statusBad border border-statusBad/30 hover:bg-statusBad/20 disabled:opacity-50"
+                            title="Re-arm the kill switch. The day's loss baseline is re-taken from the next equity reading."
+                        >
+                            <RotateCcw size={12} /> {resetting ? 'RESETTING…' : 'RESET KILL SWITCH'}
+                        </button>
+                    )}
+                </div>
+
+                {risk ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                        <div>
+                            <div className="text-[11px] text-textMuted uppercase tracking-wider">Kill switch</div>
+                            <div className={`font-mono font-bold ${killSwitchTripped ? 'text-statusBad' : 'text-statusGood'}`}>
+                                {killSwitchTripped ? 'TRIPPED' : 'ARMED'}
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-[11px] text-textMuted uppercase tracking-wider">Day drawdown</div>
+                            <div className="font-mono">{risk.drawdown_pct != null ? `${(risk.drawdown_pct * 100).toFixed(2)}%` : '—'}</div>
+                        </div>
+                        <div>
+                            <div className="text-[11px] text-textMuted uppercase tracking-wider">Day start equity</div>
+                            <div className="font-mono">{risk.start_equity != null ? Number(risk.start_equity).toFixed(2) : '—'}</div>
+                        </div>
+                        <div>
+                            <div className="text-[11px] text-textMuted uppercase tracking-wider">Last equity</div>
+                            <div className="font-mono">{risk.last_equity != null ? Number(risk.last_equity).toFixed(2) : '—'}</div>
+                        </div>
+                        {killSwitchTripped && risk.reason && (
+                            <div className="col-span-2 sm:col-span-4 text-xs text-statusBad font-mono">{risk.reason}</div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="text-sm text-textMuted italic mb-4">No risk state reported yet (waiting for the first broker refresh).</div>
+                )}
+
+                {riskLimits && (
+                    <div className="flex flex-wrap gap-2">
+                        {RISK_LIMIT_LABELS.map(([key, label, fmt]) => (
+                            <span key={key} className="px-2 py-1 rounded bg-surfaceHighlight border border-border text-[11px] font-mono" title={key}>
+                                <span className="text-textMuted">{label}: </span>
+                                <span className="text-text">{riskLimits[key] == null ? 'off' : fmt(riskLimits[key])}</span>
+                            </span>
+                        ))}
+                        {Array.isArray(riskLimits.blocked_symbols) && riskLimits.blocked_symbols.length > 0 && (
+                            <span className="px-2 py-1 rounded bg-surfaceHighlight border border-border text-[11px] font-mono">
+                                <span className="text-textMuted">Blocked: </span>
+                                <span className="text-text">{riskLimits.blocked_symbols.join(', ')}</span>
+                            </span>
+                        )}
+                    </div>
+                )}
+            </div>
 
             <div className="flex flex-col lg:flex-row gap-4 mt-4">
                 {/* Active Filters */}

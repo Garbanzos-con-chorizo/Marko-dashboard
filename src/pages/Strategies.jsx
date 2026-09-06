@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStrategy } from '../context/StrategyContext';
 import { useTelemetry } from '../context/TelemetryContext';
 import { adminService } from '../services/adminService';
-import { Play, Square, Pause, Activity, TrendingUp, TrendingDown, Trash2, AlertTriangle, X, CheckCircle, Key } from 'lucide-react';
+import { Play, Square, Pause, Activity, TrendingUp, TrendingDown, Trash2, AlertTriangle, X, CheckCircle, Key, RotateCcw } from 'lucide-react';
 import EditCredentialsModal from '../components/EditCredentialsModal';
 
 export default function Strategies() {
@@ -110,13 +110,22 @@ export default function Strategies() {
                         : s;
 
                     const rawStatus = (strategy.status || '').toUpperCase();
-                    const isError = rawStatus === 'ERROR' || rawStatus === 'CRASHED';
-                    const isStopped = rawStatus === 'STOPPED' || rawStatus === 'OFF' || !rawStatus;
+                    const isKillSwitch = rawStatus === 'KILL_SWITCH' || strategy.risk?.tripped === true;
+                    const isGeoBlocked = rawStatus === 'VENUE_GEO_BLOCKED';
+                    const isError = rawStatus === 'ERROR' || rawStatus === 'CRASHED' || isKillSwitch || isGeoBlocked;
                     const isStarting = rawStatus === 'STARTING' || rawStatus === 'WARMUP';
                     const isRunning = rawStatus === 'RUNNING' || rawStatus === 'ACTIVE' || rawStatus === 'LIVE';
                     const isPaused = rawStatus === 'PAUSED';
                     const isActive = isRunning || isStarting || isPaused;
-                    const hasCredentialIssue = strategy.credentials_ok === false || rawStatus === 'CREDENTIALS_MISSING';
+                    const hasCredentialIssue = strategy.credentials_ok === false
+                        || rawStatus === 'CREDENTIALS_MISSING' || rawStatus === 'CREDENTIALS_INVALID';
+                    // MISSING: no key stored. INVALID: the broker rejected the stored key
+                    // (typically paper keys on a LIVE instance, or the reverse).
+                    const credentialsInvalid = strategy.credential_error === 'INVALID_CREDENTIALS' || rawStatus === 'CREDENTIALS_INVALID';
+                    const credentialLabel = credentialsInvalid ? 'CREDENTIALS_INVALID' : 'CREDENTIALS_MISSING';
+                    const executionMode = (strategy.execution_mode || 'PAPER').toUpperCase();
+                    const universe = Array.isArray(strategy.symbols) && strategy.symbols.length > 0 ? strategy.symbols : [strategy.symbol];
+                    const drawdownPct = strategy.risk?.drawdown_pct != null ? (strategy.risk.drawdown_pct * 100).toFixed(1) : null;
                     const hasStaleFeed = strategy.feed_stale === true;
                     const staleFeedHours = strategy.seconds_since_last_bar
                         ? (strategy.seconds_since_last_bar / 3600).toFixed(1)
@@ -148,8 +157,29 @@ export default function Strategies() {
                                         {strategy.id}
                                         {isSelected && <span className="text-[10px] bg-primary text-background px-1.5 py-0.5 rounded font-sans font-bold">ACTIVE</span>}
                                         {hasCredentialIssue && (
-                                            <span className="text-[10px] bg-statusBad/20 text-statusBad px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1">
-                                                <AlertTriangle size={10} /> CREDS
+                                            <span
+                                                className="text-[10px] bg-statusBad/20 text-statusBad px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1"
+                                                title={credentialsInvalid
+                                                    ? `The broker rejected the stored API key for this ${executionMode} instance. Alpaca paper keys start with PK, live keys with AK.`
+                                                    : 'No broker credentials stored for this instance.'}
+                                            >
+                                                <AlertTriangle size={10} /> {credentialsInvalid ? 'BAD CREDS' : 'NO CREDS'}
+                                            </span>
+                                        )}
+                                        {isKillSwitch && (
+                                            <span
+                                                className="text-[10px] bg-statusBad/20 text-statusBad px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1"
+                                                title={strategy.risk?.reason || 'Daily loss limit hit: new risk blocked until the next UTC day or a manual reset.'}
+                                            >
+                                                <AlertTriangle size={10} /> KILL SWITCH{drawdownPct ? ` -${drawdownPct}%` : ''}
+                                            </span>
+                                        )}
+                                        {isGeoBlocked && (
+                                            <span
+                                                className="text-[10px] bg-statusBad/20 text-statusBad px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1"
+                                                title={strategy.capability_error || 'A bound venue is geo-blocked from the deployment region.'}
+                                            >
+                                                <AlertTriangle size={10} /> GEO-BLOCKED
                                             </span>
                                         )}
                                         {hasStaleFeed && !hasCredentialIssue && (
@@ -162,13 +192,23 @@ export default function Strategies() {
                                         )}
                                     </h3>
                                     <div className="flex items-center gap-2 text-xs text-textMuted mt-1 font-mono">
-                                        <span className={`px-1 rounded text-[10px] font-bold ${(strategy.broker_type || 'PAPER') === 'LIVE'
+                                        {/* Mode comes from execution_mode; broker_type is the venue name
+                                            (ALPACA/BINANCE), which previously made every instance read PAPER. */}
+                                        <span
+                                            className={`px-1 rounded text-[10px] font-bold ${executionMode === 'LIVE'
                                                 ? 'bg-red-500/20 text-red-500 border border-red-500/30'
                                                 : 'bg-blue-500/20 text-blue-500 border border-blue-500/30'
-                                            }`}>
-                                            {strategy.broker_type || 'PAPER'}
+                                            }`}
+                                            title={`${executionMode} execution on ${strategy.broker_type || 'ALPACA'}`}
+                                        >
+                                            {executionMode} · {strategy.broker_type || 'ALPACA'}
                                         </span>
-                                        <span className="text-text">{strategy.symbol}</span>
+                                        <span className="text-text" title={universe.join(', ')}>
+                                            {strategy.symbol}
+                                            {universe.length > 1 && (
+                                                <span className="text-textMuted"> +{universe.length - 1}</span>
+                                            )}
+                                        </span>
                                         <span className="w-1 h-1 rounded-full bg-border"></span>
                                         <span>{strategy.timeframe}</span>
                                     </div>
@@ -195,7 +235,7 @@ export default function Strategies() {
                                                 : isError ? 'bg-statusBad'
                                                     : 'bg-textMuted' /* STOPPED */
                                         }`}></div>
-                                {hasCredentialIssue ? 'CREDENTIALS_MISSING' : (strategy.status || 'STOPPED')}
+                                {hasCredentialIssue ? credentialLabel : (strategy.status || 'STOPPED')}
                             </div>
 
                                 {/* Active PnL (Pocket PnL) */}
@@ -236,6 +276,16 @@ export default function Strategies() {
                                         title="Start Strategy"
                                     >
                                         <Play size={16} />
+                                    </button>
+                                )}
+
+                                {isKillSwitch && (
+                                    <button
+                                        onClick={(e) => handleControl(e, strategy.id, 'reset_kill_switch')}
+                                        className="p-2 rounded hover:bg-statusBad/20 hover:text-statusBad text-textMuted transition-colors ml-1"
+                                        title="Reset kill switch (re-arms; the day's loss baseline is re-taken)"
+                                    >
+                                        <RotateCcw size={16} />
                                     </button>
                                 )}
 

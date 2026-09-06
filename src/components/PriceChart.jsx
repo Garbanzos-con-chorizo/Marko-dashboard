@@ -1,9 +1,17 @@
 import React, { useRef, useEffect } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
+import { useStrategy } from '../context/StrategyContext';
 
 export default function PriceChart({ chartData }) {
     const canvasRef = useRef(null);
     const { barsLimit, setBarsLimit, selectedChartSymbol, setSelectedChartSymbol } = useTelemetry();
+    const { strategies, selectedStrategyId } = useStrategy();
+    // The selected instance's universe comes first in the picker: for a
+    // multi-symbol instance those are the legs that actually have bars.
+    const selected = strategies.find((s) => s.id === selectedStrategyId);
+    const universe = Array.isArray(selected?.symbols) && selected.symbols.length > 0
+        ? selected.symbols
+        : (selected?.symbol ? [selected.symbol] : []);
     const commonSymbols = [
         'BTC/USD',
         'ETH/USD',
@@ -266,13 +274,19 @@ export default function PriceChart({ chartData }) {
                             className="bg-surfaceHighlight border border-border text-text text-[10px] font-mono px-2 py-1 rounded w-[140px]"
                         />
                         <datalist id="marko-chart-symbols">
-                            {(Array.isArray(chartData.available_symbols) ? chartData.available_symbols : []).map((sym) => (
-                                <option key={`avail-${sym}`} value={sym} />
-                            ))}
-                            {commonSymbols.map((sym) => (
-                                <option key={`common-${sym}`} value={sym} />
+                            {[...new Set([
+                                ...universe,
+                                ...(Array.isArray(chartData.available_symbols) ? chartData.available_symbols : []),
+                                ...commonSymbols,
+                            ])].map((sym) => (
+                                <option key={sym} value={sym} />
                             ))}
                         </datalist>
+                        {universe.length > 1 && (
+                            <span className="text-[10px] font-mono text-textMuted" title={universe.join(', ')}>
+                                {universe.length} legs
+                            </span>
+                        )}
                         {(selectedChartSymbol && selectedChartSymbol !== chartData.symbol) && (
                             <button
                                 onClick={() => setSelectedChartSymbol(chartData.symbol)}

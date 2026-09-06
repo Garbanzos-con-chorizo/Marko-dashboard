@@ -8,6 +8,7 @@ export default function Positions() {
 
     const rawPositions = data?.positions;
     const status = data?.status;
+    const openOrders = Array.isArray(data?.open_orders) ? data.open_orders : [];
 
     // Get the current strategy info
     const currentStrategy = strategies.find(s => s.id === selectedStrategyId);
@@ -86,6 +87,61 @@ export default function Positions() {
                                         </td>
                                         <td className="p-4 text-right font-mono text-textSecondary">
                                             {pocket.positions?.length || 0}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Working orders: submitted, not yet filled or cancelled. A target
+                the strategy re-emits counts these toward its position, so
+                what is shown here is what the engine will not re-send. */}
+            <div className="card p-0 overflow-hidden">
+                <div className="p-4 border-b border-border bg-surfaceHighlight/30 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-text uppercase tracking-wider">Working Orders</h3>
+                    <span className="text-xs font-mono text-textMuted">{openOrders.length} open</span>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-sm">
+                        <thead>
+                            <tr className="bg-surfaceHighlight text-left text-textMuted">
+                                <th className="p-4 font-medium whitespace-nowrap">SYMBOL</th>
+                                <th className="p-4 font-medium whitespace-nowrap">SIDE</th>
+                                <th className="p-4 font-medium whitespace-nowrap">TYPE</th>
+                                <th className="p-4 font-medium text-right whitespace-nowrap">QTY</th>
+                                <th className="p-4 font-medium text-right whitespace-nowrap">FILLED</th>
+                                <th className="p-4 font-medium text-right whitespace-nowrap">LIMIT / STOP</th>
+                                <th className="p-4 font-medium whitespace-nowrap">SUBMITTED</th>
+                                <th className="p-4 font-medium whitespace-nowrap">CLIENT ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {openOrders.length === 0 ? (
+                                <tr>
+                                    <td colSpan="8" className="p-6 text-center text-textMuted">
+                                        No working orders.
+                                    </td>
+                                </tr>
+                            ) : (
+                                openOrders.map((o) => (
+                                    <tr key={o.order_id} className="border-b border-border last:border-0 hover:bg-surfaceHighlight/50 transition-colors">
+                                        <td className="p-4 font-mono font-semibold">{o.symbol}</td>
+                                        <td className={`p-4 font-mono font-bold ${o.side === 'BUY' ? 'text-statusGood' : 'text-statusBad'}`}>{o.side}</td>
+                                        <td className="p-4 font-mono text-textSecondary">{o.order_type || 'MARKET'}</td>
+                                        <td className="p-4 text-right font-mono">{o.qty}</td>
+                                        <td className="p-4 text-right font-mono">{o.qty_filled ?? 0}</td>
+                                        <td className="p-4 text-right font-mono">
+                                            {o.limit_price != null ? formatCurrency(o.limit_price) : '—'}
+                                            {o.stop_price != null ? ` / ${formatCurrency(o.stop_price)}` : ''}
+                                        </td>
+                                        <td className="p-4 font-mono text-textMuted text-xs">
+                                            {o.submitted_at ? new Date(o.submitted_at).toLocaleString() : '—'}
+                                        </td>
+                                        <td className="p-4 font-mono text-textMuted text-xs" title={o.client_order_id || ''}>
+                                            {o.client_order_id ? o.client_order_id.slice(0, 12) + '…' : '—'}
                                         </td>
                                     </tr>
                                 ))

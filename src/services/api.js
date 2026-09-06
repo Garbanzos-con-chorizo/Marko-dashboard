@@ -206,7 +206,22 @@ function transformTelemetry(raw) {
     })),
     // NEW: Pockets (Strategy Breakdown)
     pockets,
-    events: raw.events || []
+    events: raw.events || [],
+    // Instance metadata and risk state (V2 only; absent on the legacy endpoint)
+    instance: {
+      id: raw.instance_id || raw.id || null,
+      symbol: raw.symbol || null,
+      symbols: Array.isArray(raw.symbols) ? raw.symbols : (raw.symbol ? [raw.symbol] : []),
+      timeframe: raw.timeframe || null,
+      status: raw.status || null,
+      broker_type: raw.broker_type || null,
+      execution_mode: raw.execution_mode || null,
+      credentials_ok: raw.credentials_ok ?? null,
+      credential_error: raw.credential_error || null
+    },
+    risk: raw.risk || null,
+    risk_limits: raw.risk_limits || null,
+    open_orders: Array.isArray(raw.open_orders) ? raw.open_orders : []
   };
 }
 

@@ -10,22 +10,30 @@ export default function ConfigureInstanceModal({ strategy, onClose, onSuccess })
     // Broker Configuration State
     const [broker, setBroker] = useState('ALPACA');
     const [executionMode, setExecutionMode] = useState('PAPER');
+    // Market data venue, independent of the broker. Empty = engine default (Alpaca).
+    const [dataProvider, setDataProvider] = useState('');
     const [apiKey, setApiKey] = useState('');
     const [apiSecret, setApiSecret] = useState('');
 
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState(null);
 
+    // "BTC/USD" or "AAPL, MSFT, GOOG": the first entry is the primary /
+    // display symbol, the rest form the universe of a multi-symbol strategy.
+    const parseSymbols = (raw) => raw.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+
     // Auto-generate ID suggestion
     const generateId = (sym, tf) => {
-        if (!sym || !tf) return;
-        const cleanSymbol = sym.replace(/[^a-zA-Z0-9]/g, '');
+        const [primary] = parseSymbols(sym || '');
+        if (!primary || !tf) return;
+        const cleanSymbol = primary.replace(/[^a-zA-Z0-9]/g, '');
         setInstanceId(`${strategy.id}_${cleanSymbol}_${tf}`);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!instanceId || !symbol || !timeframe) return;
+        const symbols = parseSymbols(symbol);
+        if (!instanceId || symbols.length === 0 || !timeframe) return;
 
         setIsCreating(true);
         setError(null);
@@ -33,8 +41,10 @@ export default function ConfigureInstanceModal({ strategy, onClose, onSuccess })
         try {
             await adminService.createInstance(strategy.id, {
                 instanceId,
-                symbol: symbol.toUpperCase(),
+                symbol: symbols[0],
+                symbols: symbols.slice(1),
                 timeframe,
+                data_provider: dataProvider || null,
                 // NEW: Broker Config Payload
                 broker_config: {
                     broker,
@@ -84,10 +94,12 @@ export default function ConfigureInstanceModal({ strategy, onClose, onSuccess })
                     {/* Basic Configuration */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
-                            <label className="block text-xs font-bold text-textSecondary uppercase mb-1.5 ml-1">Symbol</label>
+                            <label className="block text-xs font-bold text-textSecondary uppercase mb-1.5 ml-1">
+                                Symbol <span className="text-textMuted font-normal normal-case">(comma-separate for a multi-symbol strategy)</span>
+                            </label>
                             <input
                                 type="text"
-                                placeholder="BTC/USD"
+                                placeholder="BTC/USD  or  AAPL, MSFT, GOOG"
                                 value={symbol}
                                 onChange={(e) => {
                                     setSymbol(e.target.value);
@@ -111,6 +123,7 @@ export default function ConfigureInstanceModal({ strategy, onClose, onSuccess })
                                 <option value="1m">1m</option>
                                 <option value="5m">5m</option>
                                 <option value="15m">15m</option>
+                                <option value="30m">30m</option>
                                 <option value="1h">1h</option>
                                 <option value="4h">4h</option>
                                 <option value="1d">1d</option>
@@ -163,6 +176,23 @@ export default function ConfigureInstanceModal({ strategy, onClose, onSuccess })
                                     <option value="LIVE">Live Trading</option>
                                 </select>
                             </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-[10px] font-bold text-textMuted uppercase mb-1">Market Data</label>
+                            <select
+                                value={dataProvider}
+                                onChange={(e) => setDataProvider(e.target.value)}
+                                className="w-full p-2.5 bg-background border border-border rounded text-sm focus:border-primary"
+                                disabled={isCreating}
+                            >
+                                <option value="">Same as engine default (Alpaca)</option>
+                                <option value="alpaca">Alpaca (needs Alpaca key; equities and crypto, 1m and up)</option>
+                                <option value="binance">Binance public feed (no key; crypto, 1s and up)</option>
+                            </select>
+                            <p className="text-[10px] text-textMuted italic mt-1">
+                                Bars can come from a different venue than the one that executes. The engine refuses the pair if the strategy's requirements cannot be met.
+                            </p>
                         </div>
 
                         {/* Credentials Inputs */}

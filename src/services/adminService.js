@@ -64,7 +64,11 @@ async function createInstance(strategyId, config) {
                 strategy_id: strategyId,
                 instance_id: config.instanceId,
                 symbol: config.symbol,
+                // Extra legs for multi-symbol strategies; the backend refuses
+                // them with a 400 if the strategy does not declare multi_symbol.
+                symbols: config.symbols && config.symbols.length > 0 ? config.symbols : null,
                 timeframe: config.timeframe,
+                data_provider: config.data_provider || null,
                 params: config.params || {},
                 broker_config: config.broker_config || null // NEW: Dynamic Broker Config
             })
