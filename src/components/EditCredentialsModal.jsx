@@ -95,6 +95,7 @@ export default function EditCredentialsModal({ instance, onClose, onSuccess }) {
                             >
                                 <option value="ALPACA">Alpaca Markets</option>
                                 <option value="BINANCE">Binance</option>
+                                    <option value="KRAKEN">Kraken (paper = local simulation)</option>
                             </select>
                         </div>
                         <div>
