@@ -188,7 +188,8 @@ export default function ConfigureInstanceModal({ strategy, onClose, onSuccess })
                             >
                                 <option value="">Same as engine default (Alpaca)</option>
                                 <option value="alpaca">Alpaca (needs Alpaca key; equities and crypto, 1m and up)</option>
-                                <option value="binance">Binance public feed (no key; crypto, 1s and up)</option>
+                                <option value="kraken">Kraken public feed (no key; crypto, 1m and up; reachable where Binance is geo-blocked)</option>
+                                <option value="binance">Binance public feed (no key; crypto, 1s and up; geo-blocked from this deployment)</option>
                             </select>
                             <p className="text-[10px] text-textMuted italic mt-1">
                                 Bars can come from a different venue than the one that executes. The engine refuses the pair if the strategy's requirements cannot be met.
