@@ -4,7 +4,8 @@ import { useStrategy } from '../context/StrategyContext';
 import { useStrategyCatalog } from '../context/StrategyCatalogContext';
 import StatCard from '../components/StatCard';
 import SchemaMetrics from '../components/SchemaMetrics'; // Import Schema Metrics
-import { AlertCircle, Loader, ShieldAlert, ShieldCheck, RotateCcw } from 'lucide-react';
+import { AlertCircle, Loader, ShieldAlert, ShieldCheck, RotateCcw, Pencil } from 'lucide-react';
+import { adminService } from '../services/adminService';
 
 // Human labels for the risk limits the engine reports. Order matters: it is
 // the order they are displayed in.
@@ -26,6 +27,45 @@ export default function Strategy() {
     const risk = data?.risk || null;
     const riskLimits = data?.risk_limits || null;
     const killSwitchTripped = risk?.tripped === true;
+
+    // Inline editor for per-instance limits. Each field: blank keeps the
+    // current value, the word "off" disables the limit, a number sets it.
+    const [editingLimits, setEditingLimits] = useState(false);
+    const [limitDraft, setLimitDraft] = useState({});
+    const [savingLimits, setSavingLimits] = useState(false);
+    const [limitError, setLimitError] = useState(null);
+
+    const parseLimit = (raw) => {
+        const v = String(raw ?? '').trim().toLowerCase();
+        if (v === '') return undefined;
+        if (v === 'off' || v === 'none' || v === 'null') return null;
+        const n = Number(v);
+        if (Number.isNaN(n)) throw new Error(`"${raw}" is not a number (use "off" to disable)`);
+        return n;
+    };
+
+    const submitLimits = async (reset = false) => {
+        if (!selectedStrategyId) return;
+        setSavingLimits(true);
+        setLimitError(null);
+        try {
+            const limits = {};
+            if (!reset) {
+                for (const [key, raw] of Object.entries(limitDraft)) {
+                    const v = parseLimit(raw);
+                    if (v !== undefined) limits[key] = v;
+                }
+            }
+            await adminService.updateRiskLimits(selectedStrategyId, limits, reset);
+            setEditingLimits(false);
+            setLimitDraft({});
+            setTimeout(() => refreshTelemetry(), 1500);
+        } catch (err) {
+            setLimitError(err.message || 'Failed to save limits');
+        } finally {
+            setSavingLimits(false);
+        }
+    };
 
     const handleResetKillSwitch = async () => {
         if (!selectedStrategyId) return;
@@ -206,6 +246,14 @@ export default function Strategy() {
                             : <ShieldCheck size={16} className="text-statusGood" />}
                         Risk Layer
                     </h3>
+                    <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => { setEditingLimits(v => !v); setLimitError(null); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded bg-surfaceHighlight text-textSecondary border border-border hover:text-text"
+                        title="Set per-instance risk overrides; they take effect on the next order without a restart"
+                    >
+                        <Pencil size={12} /> {editingLimits ? 'CLOSE' : 'EDIT LIMITS'}
+                    </button>
                     {killSwitchTripped && (
                         <button
                             onClick={handleResetKillSwitch}
@@ -216,7 +264,49 @@ export default function Strategy() {
                             <RotateCcw size={12} /> {resetting ? 'RESETTING…' : 'RESET KILL SWITCH'}
                         </button>
                     )}
+                    </div>
                 </div>
+
+                {editingLimits && (
+                    <div className="mb-4 p-3 rounded border border-border bg-surfaceHighlight/40">
+                        <div className="text-[11px] text-textMuted mb-2">
+                            Blank keeps the current value. Type <span className="font-mono">off</span> to disable a limit. Fractions are of equity (0.5 = 50%).
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {RISK_LIMIT_LABELS.map(([key, label]) => (
+                                <label key={key} className="flex flex-col gap-1 text-[11px] text-textMuted">
+                                    <span>{label}</span>
+                                    <input
+                                        type="text"
+                                        placeholder={riskLimits && riskLimits[key] != null ? String(riskLimits[key]) : 'off'}
+                                        value={limitDraft[key] ?? ''}
+                                        onChange={(e) => setLimitDraft(d => ({ ...d, [key]: e.target.value }))}
+                                        className="p-2 bg-background border border-border rounded text-sm font-mono text-text focus:border-primary"
+                                        disabled={savingLimits}
+                                    />
+                                </label>
+                            ))}
+                        </div>
+                        {limitError && <div className="mt-2 text-xs text-statusBad font-mono">{limitError}</div>}
+                        <div className="mt-3 flex items-center gap-2">
+                            <button
+                                onClick={() => submitLimits(false)}
+                                disabled={savingLimits}
+                                className="px-3 py-1.5 text-xs font-bold rounded bg-primary text-background disabled:opacity-50"
+                            >
+                                {savingLimits ? 'SAVING…' : 'SAVE LIMITS'}
+                            </button>
+                            <button
+                                onClick={() => submitLimits(true)}
+                                disabled={savingLimits}
+                                className="px-3 py-1.5 text-xs font-bold rounded border border-border text-textSecondary hover:text-text disabled:opacity-50"
+                                title="Drop every per-instance override so engine defaults apply"
+                            >
+                                RESET TO DEFAULTS
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {risk ? (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">

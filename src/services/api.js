@@ -400,10 +400,10 @@ async function fetchStrategies() {
   }
 }
 
-async function controlStrategy(id, action) {
+async function controlStrategy(id, action, extra = {}) {
   if (IS_MOCK) {
     await sleep(MOCK_DELAY);
-    console.log(`[MOCK] Control strategy ${id} action: ${action}`);
+    console.log(`[MOCK] Control strategy ${id} action: ${action}`, extra);
     return { success: true, message: `Strategy ${id} ${action}ed` };
   }
 
@@ -412,7 +412,8 @@ async function controlStrategy(id, action) {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ action })
+      // extra carries action-specific fields, e.g. { order_id } for cancel_order
+      body: JSON.stringify({ action, ...extra })
     });
     if (!response.ok) {
       throw new Error(`Control Error: ${response.status}`);

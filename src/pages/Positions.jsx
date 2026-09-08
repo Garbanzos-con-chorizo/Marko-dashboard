@@ -1,10 +1,27 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTelemetry } from '../context/TelemetryContext';
 import { useStrategy } from '../context/StrategyContext';
+import { api } from '../services/api';
 
 export default function Positions() {
     const { data, refreshTelemetry } = useTelemetry();
     const { strategies, selectedStrategyId } = useStrategy();
+    const [cancelling, setCancelling] = useState(null); // order_id in flight
+    const [cancelError, setCancelError] = useState(null);
+
+    const handleCancel = async (orderId) => {
+        if (!selectedStrategyId) return;
+        setCancelling(orderId);
+        setCancelError(null);
+        try {
+            await api.controlStrategy(selectedStrategyId, 'cancel_order', { order_id: orderId });
+            setTimeout(() => refreshTelemetry(), 1500);
+        } catch (err) {
+            setCancelError(err.message || 'Cancel failed');
+        } finally {
+            setCancelling(null);
+        }
+    };
 
     const rawPositions = data?.positions;
     const status = data?.status;
@@ -116,12 +133,16 @@ export default function Positions() {
                                 <th className="p-4 font-medium text-right whitespace-nowrap">LIMIT / STOP</th>
                                 <th className="p-4 font-medium whitespace-nowrap">SUBMITTED</th>
                                 <th className="p-4 font-medium whitespace-nowrap">CLIENT ID</th>
+                                <th className="p-4 font-medium whitespace-nowrap"></th>
                             </tr>
                         </thead>
                         <tbody>
+                            {cancelError && (
+                                <tr><td colSpan="9" className="p-3 text-xs text-statusBad font-mono">{cancelError}</td></tr>
+                            )}
                             {openOrders.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" className="p-6 text-center text-textMuted">
+                                    <td colSpan="9" className="p-6 text-center text-textMuted">
                                         No working orders.
                                     </td>
                                 </tr>
@@ -142,6 +163,16 @@ export default function Positions() {
                                         </td>
                                         <td className="p-4 font-mono text-textMuted text-xs" title={o.client_order_id || ''}>
                                             {o.client_order_id ? o.client_order_id.slice(0, 12) + '…' : '—'}
+                                        </td>
+                                        <td className="p-4 text-right">
+                                            <button
+                                                onClick={() => handleCancel(o.order_id)}
+                                                disabled={cancelling === o.order_id}
+                                                className="px-2 py-1 text-[11px] font-bold rounded border border-statusBad/30 text-statusBad hover:bg-statusBad/10 disabled:opacity-50"
+                                                title="Ask the broker to cancel this order"
+                                            >
+                                                {cancelling === o.order_id ? 'CANCELLING…' : 'CANCEL'}
+                                            </button>
                                         </td>
                                     </tr>
                                 ))

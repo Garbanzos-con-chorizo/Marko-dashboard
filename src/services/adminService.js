@@ -148,6 +148,24 @@ async function updateInstanceCredentials(instanceId, brokerConfig) {
     }
 }
 
+async function updateRiskLimits(instanceId, limits, reset = false) {
+    if (IS_MOCK) {
+        console.log(`[MOCK] Updating risk limits for ${instanceId}`, limits, reset);
+        await new Promise(r => setTimeout(r, 300));
+        return { status: 'updated', risk_limits: limits };
+    }
+    const response = await fetch(`${API_BASE_URL}/api/v2/admin/instances/${instanceId}/risk`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ limits, reset })
+    });
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Risk update failed: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+}
+
 async function updateStrategyVisibility(strategyId, visibility) {
     if (IS_MOCK) {
         console.log(`[MOCK] Updating visibility for ${strategyId} -> ${visibility}`);
@@ -178,6 +196,7 @@ async function updateStrategyVisibility(strategyId, visibility) {
 }
 
 export const adminService = {
+    updateRiskLimits,
     installStrategy,
     createInstance,
     deleteInstance,
